@@ -1,44 +1,7 @@
-// ──────────────────────────────────────────
-// 공급자 (ODA Technologies) 담당자 목록
-// ──────────────────────────────────────────
-export const INITIAL_STAFF = [
-  { id: 1, name: "마케팅전략기획부 / 강민렬 수석", phone: "010-2773-5445", dept: "마케팅전략기획부" },
-  { id: 2, name: "영업부 / 김철수 대리",           phone: "010-0000-0001", dept: "영업부" },
-  { id: 3, name: "기술지원부 / 박영희 과장",        phone: "010-0000-0002", dept: "기술지원부" },
-];
+export const INITIAL_STAFF = [];
 
-// ──────────────────────────────────────────
-// 거래처 (CUSTOMER) 목록
-// ──────────────────────────────────────────
-export const INITIAL_CUSTOMERS = [
-  {
-    id: 1,
-    company: "삼성전자",
-    contacts: [
-      { name: "이재용 프로",   phone: "010-1234-1234", email: "jy.lee@samsung.com" },
-      { name: "김민수 책임",   phone: "010-2345-2345", email: "ms.kim@samsung.com" },
-    ],
-  },
-  {
-    id: 2,
-    company: "LG전자",
-    contacts: [
-      { name: "박지성 선임",   phone: "010-3456-3456", email: "js.park@lge.com" },
-    ],
-  },
-  {
-    id: 3,
-    company: "현대자동차",
-    contacts: [
-      { name: "정몽구 팀장",   phone: "010-4567-4567", email: "mg.jung@hyundai.com" },
-      { name: "이순신 수석",   phone: "010-5678-5678", email: "ss.lee@hyundai.com" },
-    ],
-  },
-];
+export const INITIAL_CUSTOMERS = [];
 
-// ──────────────────────────────────────────
-// 품목 마스터 (규격 → 소비자가 & 사양)
-// ──────────────────────────────────────────
 export const INITIAL_PRODUCTS = [
   {
     id: 1,
@@ -143,18 +106,12 @@ export const INITIAL_PRODUCTS = [
   },
 ];
 
-// ──────────────────────────────────────────
-// 거래 조건 기본값
-// ──────────────────────────────────────────
 export const DEFAULT_TERMS = {
   delivery: "발주 후 4주",
   validity: "견적일로부터 3개월",
   payment: "현금결제",
 };
 
-// ──────────────────────────────────────────
-// 공급자 고정 정보
-// ──────────────────────────────────────────
 export const SUPPLIER_INFO = {
   name: "㈜오디에이테크놀로지",
   bizNo: "122-86-05459",
