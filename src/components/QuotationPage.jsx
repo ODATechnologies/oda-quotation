@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   INITIAL_STAFF, INITIAL_CUSTOMERS, INITIAL_PRODUCTS,
   DEFAULT_TERMS, SUPPLIER_INFO,
@@ -6,7 +6,9 @@ import {
 import { generateDocNo, fmtNumber, calcItem, emptyItem, todayStr } from "../utils/helpers";
 import { exportToExcel } from "../utils/exportExcel";
 import { exportToPdf }   from "../utils/exportPdf";
+import { saveQuote, getHistoryByCustomer, loadHistory } from "../utils/historyStore";
 import ItemRow from "./ItemRow";
+import QuoteHistoryPanel from "./QuoteHistoryPanel";
 
 function loadLS(key, fallback) {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -14,64 +16,60 @@ function loadLS(key, fallback) {
 }
 
 export default function QuotationPage({ showToast }) {
-  // ── 마스터 데이터 (localStorage 우선) ──
   const staffList    = loadLS("oda_staff",     INITIAL_STAFF);
   const customerList = loadLS("oda_customers", INITIAL_CUSTOMERS);
   const productList  = loadLS("oda_products",  INITIAL_PRODUCTS);
 
-  // ── 문서번호 시퀀스 ──
-  const [seqMap, setSeqMap] = useState(() => loadLS("oda_seq", {}));
+  const [seqMap,  setSeqMap]  = useState(() => loadLS("oda_seq", {}));
 
   // ── 폼 상태 ──
-  const [date,    setDate]    = useState(todayStr());
-  const [staffId, setStaffId] = useState(staffList[0]?.id || "");
-  const [custId,  setCustId]  = useState("");
+  const [date,       setDate]       = useState(todayStr());
+  const [staffId,    setStaffId]    = useState(staffList[0]?.id || "");
+  const [custId,     setCustId]     = useState("");
   const [contactIdx, setContactIdx] = useState(0);
-  // 수기 수신처
   const [manualMode, setManualMode] = useState(false);
   const [manualCompany, setManualCompany] = useState("");
-  const [manualContact, setManualContact] = useState({ name: "", phone: "", email: "" });
-
-  const [terms, setTerms] = useState(DEFAULT_TERMS);
-  const [items, setItems] = useState([emptyItem(1)]);
+  const [manualContact, setManualContact] = useState({ name:"", phone:"", email:"" });
+  const [terms,  setTerms]  = useState(DEFAULT_TERMS);
+  const [items,  setItems]  = useState([emptyItem(1)]);
   const [nextId, setNextId] = useState(2);
 
-  // ── 파생 값 ──
+  // ── 견적 이력 ──
+  const [customerHistory, setCustomerHistory] = useState([]);
+
+  // 파생값
   const staff   = staffList.find(s => s.id === staffId) || staffList[0] || {};
   const custObj = customerList.find(c => c.id === custId);
   const contact = manualMode
     ? manualContact
-    : (custObj?.contacts[contactIdx] || { name: "", phone: "", email: "" });
+    : (custObj?.contacts[contactIdx] || { name:"", phone:"", email:"" });
   const customerName = manualMode ? manualCompany : (custObj?.company || "");
 
-  // 문서번호 생성 (날짜·거래처 변경 시 재계산)
+  // 업체 바뀔 때 이력 로드
+  useEffect(() => {
+    setCustomerHistory(getHistoryByCustomer(customerName));
+  }, [customerName]);
+
   const { docNo, dateKey, seq } = useMemo(() => {
     const custKey = customerName.replace(/\s/g, "") || "UNKNOWN";
     return generateDocNo(date ? new Date(date) : new Date(), custKey, seqMap);
   }, [date, customerName, seqMap]);
 
-  // ── 계산된 품목 행 ──
   const calcedItems = useMemo(() => items.map(calcItem), [items]);
-
   const totalSupply = calcedItems.reduce((s, i) => s + i.amount, 0);
   const totalVat    = calcedItems.reduce((s, i) => s + i.vat,    0);
   const grandTotal  = totalSupply + totalVat;
 
   // ── 품목 조작 ──
-  function addItem() {
-    setItems(prev => [...prev, emptyItem(nextId)]);
-    setNextId(n => n + 1);
-  }
-  function removeItem(id) { setItems(prev => prev.filter(i => i.id !== id)); }
-  function updateItem(id, patch) {
-    setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i));
-  }
+  function addItem()           { setItems(p => [...p, emptyItem(nextId)]); setNextId(n=>n+1); }
+  function removeItem(id)      { setItems(p => p.filter(i => i.id !== id)); }
+  function updateItem(id, pat) { setItems(p => p.map(i => i.id===id ? {...i,...pat} : i)); }
 
-  // ── 출력 공통 데이터 ──
+  // ── 공통 데이터 빌드 ──
   function buildExportData() {
     return {
       docNo, date,
-      staff: { name: staff.name || "", phone: staff.phone || "" },
+      staff:    { name: staff.name||"", phone: staff.phone||"" },
       supplier: SUPPLIER_INFO,
       customer: customerName,
       contact,
@@ -81,7 +79,6 @@ export default function QuotationPage({ showToast }) {
     };
   }
 
-  // ── 문서번호 확정 (출력 시) ──
   function confirmSeq() {
     setSeqMap(prev => {
       const next = { ...prev, [dateKey]: seq };
@@ -90,33 +87,69 @@ export default function QuotationPage({ showToast }) {
     });
   }
 
+  // ── 저장 ──
+  function handleSave() {
+    if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
+    const data = buildExportData();
+    const newHistory = saveQuote(data);
+    confirmSeq();
+    setCustomerHistory(getHistoryByCustomer(customerName));
+    showToast(`✅ [${docNo}] 견적이 저장되었습니다.`, "success");
+  }
+
+  // ── 이력에서 불러오기 ──
+  const handleLoadFromHistory = useCallback((record) => {
+    // 업체 복원
+    const foundCust = customerList.find(c => c.company === record.customer);
+    if (foundCust) {
+      setManualMode(false);
+      setCustId(foundCust.id);
+      const ci = foundCust.contacts.findIndex(c => c.name === record.contact?.name);
+      setContactIdx(ci >= 0 ? ci : 0);
+    } else {
+      setManualMode(true);
+      setManualCompany(record.customer || "");
+      setManualContact(record.contact || { name:"", phone:"", email:"" });
+    }
+
+    // 담당자 복원
+    const foundStaff = staffList.find(s => s.name === record.staff?.name);
+    if (foundStaff) setStaffId(foundStaff.id);
+
+    setDate(record.date || todayStr());
+    setTerms(record.terms || DEFAULT_TERMS);
+
+    // 품목 복원
+    const restoredItems = (record.items || []).map((item, i) => ({
+      ...item,
+      id: i + 1,
+      manualPrice: true, // 저장된 단가 그대로 사용
+    }));
+    setItems(restoredItems.length > 0 ? restoredItems : [emptyItem(1)]);
+    setNextId(restoredItems.length + 1);
+
+    showToast(`[${record.docNo}] 견적을 불러왔습니다.`, "success");
+  }, [customerList, staffList, showToast]);
+
   function handleExcelExport() {
-    try {
-      exportToExcel(buildExportData());
-      confirmSeq();
-      showToast("엑셀 파일이 저장되었습니다.", "success");
-    } catch(e) { showToast("엑셀 저장 오류: " + e.message, "error"); }
+    try { exportToExcel(buildExportData()); confirmSeq(); showToast("엑셀 저장 완료", "success"); }
+    catch(e) { showToast("엑셀 오류: " + e.message, "error"); }
   }
-
   function handlePdfExport() {
-    try {
-      exportToPdf(buildExportData());
-      confirmSeq();
-      showToast("PDF 파일이 저장되었습니다.", "success");
-    } catch(e) { showToast("PDF 저장 오류: " + e.message, "error"); }
+    try { exportToPdf(buildExportData()); confirmSeq(); showToast("PDF 인쇄창이 열렸습니다.", "success"); }
+    catch(e) { showToast("PDF 오류: " + e.message, "error"); }
   }
-
   function handleReset() {
     if (!confirm("작성 내용을 초기화하시겠습니까?")) return;
-    setDate(todayStr()); setStaffId(staffList[0]?.id || "");
+    setDate(todayStr()); setStaffId(staffList[0]?.id||"");
     setCustId(""); setContactIdx(0); setManualMode(false);
-    setManualCompany(""); setManualContact({ name: "", phone: "", email: "" });
+    setManualCompany(""); setManualContact({name:"",phone:"",email:""});
     setTerms(DEFAULT_TERMS); setItems([emptyItem(1)]); setNextId(2);
   }
 
   return (
     <div>
-      {/* 상단 액션 바 */}
+      {/* 액션 바 */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
         <div>
           <div style={{ fontSize:12, color:"var(--text-muted)", marginBottom:4 }}>문서번호</div>
@@ -124,12 +157,13 @@ export default function QuotationPage({ showToast }) {
         </div>
         <div style={{ display:"flex", gap:8 }}>
           <button className="btn btn-secondary" onClick={handleReset}>↺ 초기화</button>
-          <button className="btn btn-success"   onClick={handleExcelExport}>📊 Excel 저장</button>
-          <button className="btn btn-primary"   onClick={handlePdfExport}>📄 PDF 저장</button>
+          <button className="btn btn-secondary" onClick={handleExcelExport}>📊 Excel</button>
+          <button className="btn btn-secondary" onClick={handlePdfExport}>🖨️ PDF 인쇄</button>
+          <button className="btn btn-primary"   onClick={handleSave}>💾 견적 저장</button>
         </div>
       </div>
 
-      {/* ── 섹션 1: 헤더 정보 ── */}
+      {/* 헤더 영역 */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
 
         {/* CUSTOMER */}
@@ -157,41 +191,46 @@ export default function QuotationPage({ showToast }) {
                   <div className="form-group">
                     <label>담당자</label>
                     <select value={contactIdx} onChange={e => setContactIdx(Number(e.target.value))}>
-                      {custObj.contacts.map((ct, i) => (
-                        <option key={i} value={i}>{ct.name}</option>
-                      ))}
+                      {custObj.contacts.map((ct,i) => <option key={i} value={i}>{ct.name}</option>)}
                     </select>
                   </div>
                 )}
                 <div className="form-group">
                   <label>전화</label>
-                  <input readOnly value={contact.phone || ""} placeholder="자동 입력" />
+                  <input readOnly value={contact.phone||""} placeholder="자동 입력" />
                 </div>
                 <div className="form-group">
                   <label>E-mail</label>
-                  <input readOnly value={contact.email || ""} placeholder="자동 입력" />
+                  <input readOnly value={contact.email||""} placeholder="자동 입력" />
                 </div>
               </div>
             ) : (
               <div className="form-grid" style={{ gap:10 }}>
                 <div className="form-group">
                   <label>수신 (업체명)</label>
-                  <input value={manualCompany} onChange={e => setManualCompany(e.target.value)} placeholder="업체명 입력" />
+                  <input value={manualCompany} onChange={e=>setManualCompany(e.target.value)} placeholder="업체명 입력" />
                 </div>
                 <div className="form-group">
                   <label>담당자</label>
-                  <input value={manualContact.name} onChange={e => setManualContact(p=>({...p,name:e.target.value}))} placeholder="성명/직책" />
+                  <input value={manualContact.name} onChange={e=>setManualContact(p=>({...p,name:e.target.value}))} placeholder="성명/직책" />
                 </div>
                 <div className="form-group">
                   <label>전화</label>
-                  <input value={manualContact.phone} onChange={e => setManualContact(p=>({...p,phone:e.target.value}))} placeholder="010-0000-0000" />
+                  <input value={manualContact.phone} onChange={e=>setManualContact(p=>({...p,phone:e.target.value}))} placeholder="010-0000-0000" />
                 </div>
                 <div className="form-group">
                   <label>E-mail</label>
-                  <input value={manualContact.email} onChange={e => setManualContact(p=>({...p,email:e.target.value}))} placeholder="email@company.com" />
+                  <input value={manualContact.email} onChange={e=>setManualContact(p=>({...p,email:e.target.value}))} placeholder="email@company.com" />
                 </div>
               </div>
             )}
+
+            {/* ── 견적 이력 패널 ── */}
+            <QuoteHistoryPanel
+              history={customerHistory}
+              onLoad={handleLoadFromHistory}
+              onHistoryChange={h => setCustomerHistory(getHistoryByCustomer(customerName))}
+            />
           </div>
         </div>
 
@@ -202,7 +241,7 @@ export default function QuotationPage({ showToast }) {
             <div className="form-grid" style={{ gap:10 }}>
               <div className="form-group">
                 <label>문서 일자</label>
-                <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+                <input type="date" value={date} onChange={e=>setDate(e.target.value)} />
               </div>
               <div className="form-group">
                 <label>문서번호</label>
@@ -218,26 +257,26 @@ export default function QuotationPage({ showToast }) {
               </div>
               <div className="form-group">
                 <label>담당자 <span className="required">*</span></label>
-                <select value={staffId} onChange={e => setStaffId(Number(e.target.value))}>
-                  {staffList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                <select value={staffId} onChange={e=>setStaffId(Number(e.target.value))}>
+                  {staffList.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label>전화</label>
-                <input readOnly value={staff.phone || ""} placeholder="자동 입력" />
+                <input readOnly value={staff.phone||""} placeholder="자동 입력" />
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── 섹션 2: 품목 ── */}
+      {/* 품목 */}
       <div className="card">
         <div className="card-header">
           <span className="card-title">견적 내용</span>
           <button className="btn btn-primary btn-sm" onClick={addItem}>+ 품목 추가</button>
         </div>
-        <div className="card-body" style={{ padding:"0 0 0 0" }}>
+        <div className="card-body" style={{ padding:0 }}>
           <div className="tbl-wrap">
             <table>
               <thead>
@@ -262,7 +301,7 @@ export default function QuotationPage({ showToast }) {
                     item={item}
                     idx={idx}
                     productList={productList}
-                    onUpdate={patch => updateItem(item.id, patch)}
+                    onUpdate={pat => updateItem(item.id, pat)}
                     onRemove={() => removeItem(item.id)}
                     calc={calcedItems[idx]}
                   />
@@ -270,8 +309,6 @@ export default function QuotationPage({ showToast }) {
               </tbody>
             </table>
           </div>
-
-          {/* 합계 */}
           <div className="summary-row">
             <div className="summary-cell">
               <span className="label">공급가액</span>
@@ -289,22 +326,22 @@ export default function QuotationPage({ showToast }) {
         </div>
       </div>
 
-      {/* ── 섹션 3: 거래 조건 ── */}
+      {/* TERMS */}
       <div className="card">
         <div className="card-header"><span className="card-title">TERMS &amp; CONDITIONS</span></div>
         <div className="card-body">
           <div className="form-grid form-grid-3">
             <div className="form-group">
               <label>납기</label>
-              <input value={terms.delivery} onChange={e => setTerms(p=>({...p,delivery:e.target.value}))} />
+              <input value={terms.delivery} onChange={e=>setTerms(p=>({...p,delivery:e.target.value}))} />
             </div>
             <div className="form-group">
               <label>견적 유효기간</label>
-              <input value={terms.validity} onChange={e => setTerms(p=>({...p,validity:e.target.value}))} />
+              <input value={terms.validity} onChange={e=>setTerms(p=>({...p,validity:e.target.value}))} />
             </div>
             <div className="form-group">
               <label>결제 조건</label>
-              <input value={terms.payment} onChange={e => setTerms(p=>({...p,payment:e.target.value}))} />
+              <input value={terms.payment} onChange={e=>setTerms(p=>({...p,payment:e.target.value}))} />
             </div>
           </div>
         </div>

@@ -113,6 +113,7 @@ export function exportToExcel(data) {
   ];
 
   XLSX.utils.book_append_sheet(wb, ws, "견적서");
-  const fileName = `${docNo}_견적서.xlsx`;
+  const shortNo = docNo.replace("ODA-", "");
+  const fileName = `Quotation for ${customer} ${shortNo}.xlsx`;
   XLSX.writeFile(wb, fileName);
 }
