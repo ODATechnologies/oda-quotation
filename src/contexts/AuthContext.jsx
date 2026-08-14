@@ -13,7 +13,7 @@ export const useAuth = () => useContext(AuthContext);
 
 // 최고관리자 UID (첫 승인 후 여기에 등록)
 // 최초 가입 시 이 이메일로 가입하면 자동으로 admin 권한 부여
-const ADMIN_EMAIL = "oda_lsm@odacore.com"; // ← 본인 이메일로 변경 필요 (아래 설명 참고)
+const ADMIN_EMAIL = "이승목@oda"; // ← 본인 이메일로 변경 필요 (아래 설명 참고)
 
 export function AuthProvider({ children }) {
   const [currentUser,  setCurrentUser]  = useState(null);
