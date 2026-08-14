@@ -130,8 +130,8 @@ export default function QuotationPage({ showToast }) {
         </div>
         <div style={{display:"flex",gap:8}}>
           <button className="btn btn-secondary" onClick={handleReset}>↺ 초기화</button>
-          <button className="btn btn-secondary" onClick={()=>{try{exportToExcel(buildExportData());confirmSeq();showToast("엑셀 저장 완료","success");}catch(e){showToast(e.message,"error");}}}>📊 Excel</button>
-          <button className="btn btn-secondary" onClick={()=>{try{exportToPdf(buildExportData());confirmSeq();showToast("PDF 인쇄창이 열렸습니다.","success");}catch(e){showToast(e.message,"error");}}}>🖨️ PDF 인쇄</button>
+          <button className="btn btn-secondary" onClick={()=>{try{exportToExcel(buildExportData());showToast("엑셀 저장 완료","success");}catch(e){showToast(e.message,"error");}}}>📊 Excel</button>
+          <button className="btn btn-secondary" onClick={()=>{try{exportToPdf(buildExportData());showToast("PDF 인쇄창이 열렸습니다.","success");}catch(e){showToast(e.message,"error");}}}>🖨️ PDF 인쇄</button>
           <button className="btn btn-primary"   onClick={handleSave}>💾 저장</button>
         </div>
       </div>

@@ -30,7 +30,7 @@ body {
 
 /* ── Layout ── */
 .app-header {
-  background: var(--primary);
+  background: #111111;
   color: #fff;
   padding: 0 24px;
   height: 56px;
