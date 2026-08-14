@@ -155,7 +155,7 @@ select { cursor: pointer; }
 .tbl-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
 th {
-  background: var(--primary); color: #fff;
+  background: #F84F04; color: #fff;
   font-size: 12px; font-weight: 600;
   padding: 8px 10px; text-align: center;
   white-space: nowrap;
@@ -212,7 +212,7 @@ td input:focus, td select:focus { border-color: var(--border-focus); outline: no
   display: flex; flex-direction: column; gap: 8px; z-index: 300;
 }
 .toast {
-  background: var(--primary); color: #fff;
+  background: #F84F04; color: #fff;
   padding: 10px 16px; border-radius: var(--radius-sm);
   font-size: 13px; font-weight: 500;
   box-shadow: var(--shadow-md);
