@@ -1,4 +1,5 @@
 import { fmtNumber } from "./helpers";
+import logoSrc from "../assets/logo.png";  // 빌드 시 base64로 번들링됨
 
 export function exportToPdf(data) {
   const { docNo, staff, supplier, customer, contact, items, terms, totalSupply, totalVat, grandTotal } = data;
@@ -7,7 +8,6 @@ export function exportToPdf(data) {
   const fileName = `Quotation for ${customer} ${shortNo}`;
   const ODA      = "#F84F04";
   const DARK     = "#1a1a1a";
-  const logoUrl  = `${location.origin}${import.meta.env.BASE_URL}logo.png`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -31,18 +31,13 @@ body{
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
 }
 
-/* 상단 헤더 */
-.top-header{
-  display:flex;justify-content:space-between;align-items:flex-end;
-  margin-bottom:6px;flex-shrink:0;
-}
+.top-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;flex-shrink:0;}
 .logo-wrap img{height:36px;object-fit:contain;display:block;}
 .title-block{text-align:right;}
 .quotation-title{font-size:22px;font-weight:800;letter-spacing:7px;color:#111;display:block;line-height:1;}
 .subtitle{font-size:6.5px;letter-spacing:2.5px;color:#aaa;margin-top:3px;display:block;text-transform:uppercase;}
 .orange-bar{height:2.5px;background:${ODA};margin-bottom:12px;flex-shrink:0;}
 
-/* INFO 2컬럼 */
 .info-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;flex-shrink:0;}
 .info-box{border:1px solid #ccc;}
 .info-title{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.1em;}
@@ -50,7 +45,6 @@ body{
 .info-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:62px;width:62px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
 .info-value{padding:3.5px 6px;font-size:7.5px;color:#111;display:flex;align-items:center;flex:1;}
 
-/* 품목 테이블 */
 .item-table{width:100%;border-collapse:collapse;font-size:8px;flex-shrink:0;}
 .item-table thead tr{background:${ODA};}
 .item-table th{color:#fff;padding:5.5px 4px;text-align:center;font-size:7px;font-weight:700;letter-spacing:.04em;border-right:1px solid rgba(255,255,255,.3);white-space:nowrap;}
@@ -61,10 +55,8 @@ body{
 .detail-row td{background:#f4f6fb!important;color:#666;font-size:7px;padding:2.5px 5px 2.5px 14px;border-bottom:1px solid #efefef;font-style:italic;}
 td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 
-/* 중간 여백 - min/max로 제한 */
 .spacer{flex:1;min-height:60px;max-height:120px;}
 
-/* 하단 */
 .bottom-section{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0;}
 .terms-box{border:1px solid #ccc;}
 .terms-title{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.08em;}
@@ -75,16 +67,15 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 .amt-row{display:flex;justify-content:space-between;align-items:center;padding:5px 9px;border-bottom:1px solid #e0e0e0;font-size:8px;}
 .amt-row:last-child{border-bottom:none;}
 .amt-row.total{background:${ODA};color:#fff;font-weight:800;font-size:10.5px;padding:7px 9px;}
-
 .footer{margin-top:10px;text-align:center;color:#bbb;font-size:6.5px;border-top:1px solid #eee;padding-top:6px;flex-shrink:0;}
 </style>
 </head>
 <body>
 
-<!-- 로고 좌 / QUOTATION 우 -->
 <div class="top-header">
   <div class="logo-wrap">
-    <img id="logo-img" alt="ODA Technologies"/>
+    <!-- 로고: 빌드 시 번들링된 base64 데이터 직접 삽입 -->
+    <img src="${logoSrc}" alt="ODA Technologies"/>
   </div>
   <div class="title-block">
     <span class="quotation-title">QUOTATION</span>
@@ -93,7 +84,6 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 </div>
 <div class="orange-bar"></div>
 
-<!-- INFO -->
 <div class="info-wrap">
   <div class="info-box">
     <div class="info-title">CUSTOMER</div>
@@ -112,7 +102,6 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
   </div>
 </div>
 
-<!-- 품목 -->
 <table class="item-table">
   <thead>
     <tr>
@@ -143,10 +132,8 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
   </tbody>
 </table>
 
-<!-- 중간 여백: 품목 적으면 적당히, 많으면 줄어듦 -->
 <div class="spacer"></div>
 
-<!-- 하단 -->
 <div class="bottom-section">
   <div class="terms-box">
     <div class="terms-title">TERMS &amp; CONDITIONS</div>
@@ -168,25 +155,12 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 </div>
 
 <script>
-(async function(){
-  try {
-    const res  = await fetch("${logoUrl}");
-    const blob = await res.blob();
-    const b64  = await new Promise(r => {
-      const fr = new FileReader();
-      fr.onload = () => r(fr.result);
-      fr.readAsDataURL(blob);
-    });
-    document.getElementById('logo-img').src = b64;
-  } catch(e) {
-    document.querySelector('.logo-wrap').style.display='none';
-  }
-  await document.fonts.ready;
-  setTimeout(() => {
+document.fonts.ready.then(function(){
+  setTimeout(function(){
     window.print();
-    window.onafterprint = () => window.close();
-  }, 500);
-})();
+    window.onafterprint = function(){ window.close(); };
+  }, 300);
+});
 <\/script>
 </body></html>`;
 
