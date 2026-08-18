@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { INITIAL_CUSTOMERS, DEFAULT_TERMS, SUPPLIER_INFO } from "../data/masterData";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
+import { INITIAL_CUSTOMERS, DEFAULT_TERMS, SUPPLIER_INFO, SUPPLIER_INFO_OVERSEAS } from "../data/masterData";
 import { generateDocNo, fmtNumber, calcItem, emptyItem, todayStr } from "../utils/helpers";
 import { exportToExcel } from "../utils/exportExcel";
-import { exportToPdf }   from "../utils/exportPdf";
+import { exportToPdf }         from "../utils/exportPdf";
+import { exportToPdfOverseas } from "../utils/exportPdfOverseas";
 import { saveQuote, getHistoryByCustomer } from "../utils/historyStore";
 import { useSharedProducts } from "../hooks/useSharedData";
 import { useAuth } from "../contexts/AuthContext";
-import ItemRow         from "./ItemRow";
-import ItemModal       from "./ItemModal";
+import ItemRow           from "./ItemRow";
+import ItemModal         from "./ItemModal";
 import QuoteHistoryPanel from "./QuoteHistoryPanel";
 
 function loadLS(key, fallback) {
@@ -19,16 +22,28 @@ export default function QuotationPage({ showToast }) {
   const { displayName } = useAuth();
   const { allItems: productList } = useSharedProducts();
 
-  const staffList    = loadLS("oda_staff",     []);
+  // ── Firestore 담당자 실시간 구독
+  const [staffList, setStaffList] = useState([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db,"staff"), snap => {
+      const docs = snap.docs.map(d => ({ _id:d.id, id:d.id, ...d.data() }));
+      docs.sort((a,b)=>(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+      setStaffList(docs);
+    });
+    return unsub;
+  }, []);
+
   const customerList = loadLS("oda_customers", INITIAL_CUSTOMERS);
   const [seqMap, setSeqMap] = useState(() => loadLS("oda_seq", {}));
 
+  // ── 견적 모드: "domestic" | "overseas"
+  const [mode, setMode] = useState("domestic");
+
+  // 해외 모드: 환율
+  const [exchangeRate, setExchangeRate] = useState(1350);
+
   const [date,          setDate]          = useState(todayStr());
-  const [staffId,       setStaffId]       = useState(() => {
-    const list = loadLS("oda_staff", []);
-    const found = list.find(s => s.name?.includes(displayName?.split("/").pop()?.trim()));
-    return (found || list[0])?.id || "";
-  });
+  const [staffId,       setStaffId]       = useState("");
   const [custId,        setCustId]        = useState("");
   const [contactIdx,    setContactIdx]    = useState(0);
   const [manualMode,    setManualMode]    = useState(false);
@@ -40,11 +55,25 @@ export default function QuotationPage({ showToast }) {
   const [customerHistory, setCustomerHistory] = useState([]);
   const [histLoading,   setHistLoading]   = useState(false);
   const [fixedDocNo,    setFixedDocNo]    = useState(null);
+  const [itemModal,     setItemModal]     = useState(null);
 
-  // 품목 팝업 상태
-  const [itemModal, setItemModal] = useState(null); // null | { mode:"add"|"edit", itemId }
+  // 모드별 담당자 필터
+  const filteredStaff = useMemo(() => {
+    if (mode === "overseas") return staffList.filter(s => s.type === "overseas");
+    return staffList.filter(s => !s.type || s.type === "domestic");
+  }, [staffList, mode]);
 
-  const staff    = staffList.find(s => s.id === staffId) || staffList[0] || {};
+  // 담당자 자동 매칭 (모드 변경 시 재매칭)
+  useEffect(() => {
+    if (filteredStaff.length === 0) return;
+    const found = filteredStaff.find(s =>
+      s.name && displayName && s.name.includes(displayName.split("/").pop()?.trim())
+    );
+    setStaffId((found || filteredStaff[0])?._id || "");
+  }, [filteredStaff, displayName]);
+
+  const supplier = mode === "overseas" ? SUPPLIER_INFO_OVERSEAS : SUPPLIER_INFO;
+  const staff    = staffList.find(s => s._id === staffId) || filteredStaff[0] || {};
   const custObj  = customerList.find(c => c.id === custId);
   const contact  = manualMode ? manualContact : (custObj?.contacts[contactIdx] || { name:"", phone:"", email:"" });
   const customerName = manualMode ? manualCompany : (custObj?.company || "");
@@ -66,34 +95,50 @@ export default function QuotationPage({ showToast }) {
   const docNo      = fixedDocNo || autoDocNo.docNo;
   const { dateKey, seq } = autoDocNo;
 
-  const calcedItems = useMemo(() => items.map(calcItem), [items]);
-  const totalSupply = calcedItems.reduce((s,i) => s+i.amount, 0);
-  const totalVat    = calcedItems.reduce((s,i) => s+i.vat,    0);
-  const grandTotal  = totalSupply + totalVat;
+  // 계산된 품목
+  const calcedItems = useMemo(() => items.map(item => {
+    const base = calcItem(item);
+    if (mode === "overseas" && exchangeRate) {
+      const rate = Number(exchangeRate) || 1;
+      return {
+        ...base,
+        unitPriceUSD: Math.round((base.unitPrice / rate) * 100) / 100,
+        amountUSD:    Math.round((base.amount    / rate) * 100) / 100,
+      };
+    }
+    return base;
+  }), [items, mode, exchangeRate]);
 
-  // 팝업에서 저장
+  const totalSupply = calcedItems.reduce((s,i) => s + i.amount, 0);
+  const totalVat    = calcedItems.reduce((s,i) => s + (i.vat||0), 0);
+  const grandTotal  = totalSupply + totalVat;
+  const totalUSD    = calcedItems.reduce((s,i) => s + (i.amountUSD||0), 0);
+
   function handleItemSave(savedItem) {
     if (itemModal.mode === "add") {
-      setItems(p => [...p, { ...savedItem, id: nextId }]);
+      setItems(p => [...p, { ...savedItem, id:nextId }]);
       setNextId(n => n+1);
     } else {
-      setItems(p => p.map(i => i.id === itemModal.itemId ? { ...savedItem, id: i.id } : i));
+      setItems(p => p.map(i => i.id===itemModal.itemId ? { ...savedItem, id:i.id } : i));
     }
   }
-
-  function openAddModal() {
-    setItemModal({ mode:"add", item: emptyItem(nextId) });
-  }
+  function openAddModal()  { setItemModal({ mode:"add", item:emptyItem(nextId) }); }
   function openEditModal(id) {
-    const item = items.find(i => i.id === id);
-    if (item) setItemModal({ mode:"edit", itemId: id, item });
+    const item = items.find(i => i.id===id);
+    if (item) setItemModal({ mode:"edit", itemId:id, item });
   }
-  function removeItem(id) { setItems(p => p.filter(i => i.id !== id)); }
+  function removeItem(id) { setItems(p => p.filter(i => i.id!==id)); }
 
   function buildExportData() {
-    return { docNo, date, staff:{ name:staff.name||"", phone:staff.phone||"" },
-      supplier:SUPPLIER_INFO, customer:customerName, contact,
-      items:calcedItems, terms, totalSupply, totalVat, grandTotal };
+    return {
+      docNo, date, mode,
+      staff:    { name:staff.name||"", phone:staff.phone||"" },
+      supplier,
+      customer: customerName, contact,
+      items: calcedItems, terms,
+      totalSupply, totalVat, grandTotal,
+      totalUSD, exchangeRate,
+    };
   }
 
   function confirmSeq() {
@@ -113,53 +158,99 @@ export default function QuotationPage({ showToast }) {
   }
 
   const handleLoadFromHistory = useCallback((record) => {
-    const foundCust = customerList.find(c => c.company === record.customer);
+    const foundCust = customerList.find(c => c.company===record.customer);
     if (foundCust) {
       setManualMode(false); setCustId(foundCust.id);
-      const ci = foundCust.contacts.findIndex(c => c.name === record.contact?.name);
+      const ci = foundCust.contacts.findIndex(c=>c.name===record.contact?.name);
       setContactIdx(ci>=0?ci:0);
     } else {
       setManualMode(true);
       setManualCompany(record.customer||"");
       setManualContact(record.contact||{name:"",phone:"",email:""});
     }
-    const foundStaff = staffList.find(s => s.name === record.staff?.name);
-    if (foundStaff) setStaffId(foundStaff.id);
+    const foundStaff = staffList.find(s => s.name===record.staff?.name);
+    if (foundStaff) setStaffId(foundStaff._id);
     setDate(record.date||todayStr());
     setTerms(record.terms||DEFAULT_TERMS);
     setFixedDocNo(record.docNo);
-    const restoredItems = (record.items||[]).map((item,i) => ({ ...item, id:i+1, manualPrice:true }));
+    if (record.mode) setMode(record.mode);
+    if (record.exchangeRate) setExchangeRate(record.exchangeRate);
+    const restoredItems = (record.items||[]).map((item,i)=>({...item,id:i+1,manualPrice:true}));
     setItems(restoredItems);
-    setNextId(restoredItems.length + 1);
+    setNextId(restoredItems.length+1);
     showToast(`[${record.docNo}] 견적을 불러왔습니다.`, "success");
   }, [customerList, staffList, showToast]);
 
   function handleReset() {
     if (!confirm("작성 내용을 초기화하시겠습니까?")) return;
-    setDate(todayStr()); setStaffId(staffList[0]?.id||"");
+    setDate(todayStr()); setMode("domestic"); setExchangeRate(1350);
     setCustId(""); setContactIdx(0); setManualMode(false);
     setManualCompany(""); setManualContact({name:"",phone:"",email:""});
     setTerms(DEFAULT_TERMS); setItems([]); setNextId(1); setFixedDocNo(null);
   }
 
+  function handlePdfExport() {
+    try {
+      if (mode === "overseas") {
+        exportToPdfOverseas(buildExportData());
+      } else {
+        exportToPdf(buildExportData());
+      }
+      showToast("PDF 인쇄창이 열렸습니다.", "success");
+    } catch(e) { showToast(e.message, "error"); }
+  }
+
+  const isOverseas = mode === "overseas";
+
   return (
     <div>
-      {/* 액션 바 */}
+      {/* 상단 액션 바 */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-        <div>
-          <div style={{ fontSize:12, color:"var(--text-muted)", marginBottom:4 }}>문서번호</div>
-          <span className="docno-chip">{docNo}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div>
+            <div style={{ fontSize:12, color:"var(--text-muted)", marginBottom:4 }}>문서번호</div>
+            <span className="docno-chip">{docNo}</span>
+          </div>
+          {/* 국내/해외 모드 선택 */}
+          <div style={{ display:"flex", gap:0, border:"1px solid var(--border)", borderRadius:8, overflow:"hidden" }}>
+            {[["domestic","🇰🇷 국내"],["overseas","🌐 해외"]].map(([v,label]) => (
+              <button key={v} onClick={() => setMode(v)} style={{
+                padding:"7px 16px", border:"none", cursor:"pointer",
+                fontFamily:"inherit", fontSize:13, fontWeight:600,
+                background: mode===v ? (v==="overseas" ? "#1E3C78" : "var(--primary)") : "#fff",
+                color: mode===v ? "#fff" : "var(--text-sub)",
+                transition:"all .15s",
+              }}>{label}</button>
+            ))}
+          </div>
         </div>
         <div style={{ display:"flex", gap:8 }}>
           <button className="btn btn-secondary" onClick={handleReset}>↺ 초기화</button>
           <button className="btn btn-secondary" onClick={() => { try{ exportToExcel(buildExportData()); showToast("엑셀 저장 완료","success"); }catch(e){ showToast(e.message,"error"); } }}>📊 Excel</button>
-          <button className="btn btn-secondary" onClick={() => { try{ exportToPdf(buildExportData()); showToast("PDF 인쇄창이 열렸습니다.","success"); }catch(e){ showToast(e.message,"error"); } }}>🖨️ PDF 인쇄</button>
+          <button className="btn btn-secondary" onClick={handlePdfExport}>🖨️ PDF 인쇄</button>
           <button className="btn btn-primary" onClick={handleSave}>💾 저장</button>
         </div>
       </div>
 
-      {/* 헤더 */}
+      {/* 해외 모드: 환율 입력 */}
+      {isOverseas && (
+        <div style={{ background:"#EEF3FF", border:"1px solid #C7D7FD", borderRadius:8, padding:"10px 16px", marginBottom:14, display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:13, fontWeight:600, color:"#1E3C78" }}>🌐 해외 견적 모드</span>
+          <span style={{ fontSize:12, color:"#4B5563" }}>환율 (₩/USD)</span>
+          <input
+            type="number"
+            value={exchangeRate}
+            onChange={e => setExchangeRate(e.target.value)}
+            style={{ width:100, padding:"5px 10px", border:"1px solid #C7D7FD", borderRadius:6, fontSize:13, textAlign:"right" }}
+          />
+          <span style={{ fontSize:12, color:"#4B5563" }}>원 = $1</span>
+          <span style={{ fontSize:11, color:"#6B7280", marginLeft:8 }}>공급자: {SUPPLIER_INFO_OVERSEAS.name} · VAT 미적용</span>
+        </div>
+      )}
+
+      {/* 헤더 2컬럼 */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+        {/* CUSTOMER */}
         <div className="card">
           <div className="card-header">
             <span className="card-title">CUSTOMER (공급받는자)</span>
@@ -204,18 +295,25 @@ export default function QuotationPage({ showToast }) {
           </div>
         </div>
 
+        {/* ODA TECHNOLOGIES */}
         <div className="card">
-          <div className="card-header"><span className="card-title">ODA TECHNOLOGIES (공급자)</span></div>
+          <div className="card-header">
+            <span className="card-title">ODA TECHNOLOGIES (공급자)</span>
+            {isOverseas && <span style={{ fontSize:11, background:"#EEF3FF", color:"#2563EB", padding:"2px 8px", borderRadius:20, fontWeight:600 }}>해외</span>}
+          </div>
           <div className="card-body">
             <div className="form-grid" style={{ gap:10 }}>
               <div className="form-group"><label>견적 일자</label><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
               <div className="form-group"><label>문서번호</label><input readOnly value={docNo} style={{ fontWeight:700, color:"var(--accent)" }}/></div>
-              <div className="form-group"><label>공급자</label><input readOnly value={SUPPLIER_INFO.name}/></div>
-              <div className="form-group"><label>사업자등록번호</label><input readOnly value={SUPPLIER_INFO.bizNo}/></div>
+              <div className="form-group"><label>공급자</label><input readOnly value={supplier.name}/></div>
+              <div className="form-group"><label>사업자등록번호</label><input readOnly value={supplier.bizNo}/></div>
               <div className="form-group">
-                <label>담당자 <span className="required">*</span></label>
-                <select value={staffId} onChange={e=>setStaffId(Number(e.target.value))}>
-                  {staffList.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                <label>담당자 <span className="required">*</span>
+                  {isOverseas && <span style={{ fontSize:10, color:"#854D0E", marginLeft:6 }}>해외 담당자만 표시</span>}
+                </label>
+                <select value={staffId} onChange={e=>setStaffId(e.target.value)}>
+                  <option value="">-- 선택 --</option>
+                  {filteredStaff.map(s=><option key={s._id} value={s._id}>{s.name}</option>)}
                 </select>
               </div>
               <div className="form-group"><label>전화</label><input readOnly value={staff.phone||""} placeholder="자동 입력"/></div>
@@ -227,15 +325,17 @@ export default function QuotationPage({ showToast }) {
       {/* 견적 내용 */}
       <div className="card">
         <div className="card-header">
-          <span className="card-title">견적 내용</span>
+          <span className="card-title">
+            견적 내용
+            {isOverseas && <span style={{ fontSize:11, color:"#2563EB", marginLeft:8 }}>· USD 기준 · VAT 미적용</span>}
+          </span>
           <button className="btn btn-primary btn-sm" onClick={openAddModal}>+ 품목 추가</button>
         </div>
         <div className="card-body" style={{ padding:0 }}>
           {items.length === 0 ? (
             <div style={{ textAlign:"center", padding:"40px 20px", color:"var(--text-muted)" }}>
               <div style={{ fontSize:32, marginBottom:8 }}>📦</div>
-              <div style={{ fontSize:14, marginBottom:12 }}>품목이 없습니다.</div>
-              <button className="btn btn-primary" onClick={openAddModal}>+ 품목 추가</button>
+              <div style={{ fontSize:14 }}>상단 <strong>+ 품목 추가</strong> 버튼을 눌러 품목을 등록하세요.</div>
             </div>
           ) : (
             <div className="tbl-wrap">
@@ -246,18 +346,20 @@ export default function QuotationPage({ showToast }) {
                     <th style={{textAlign:"left"}}>품목</th>
                     <th style={{textAlign:"left"}}>규격</th>
                     <th style={{width:56}}>수량</th>
-                    <th>단가</th>
-                    <th>금액</th>
-                    <th>부가세</th>
+                    <th>{isOverseas ? "단가 (USD)" : "단가"}</th>
+                    <th>{isOverseas ? "금액 (USD)" : "금액"}</th>
+                    {!isOverseas && <th>부가세</th>}
                     <th>비고</th>
                     <th style={{width:36}}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, idx) => (
+                  {items.map((item,idx) => (
                     <ItemRow
                       key={item.id} item={item} idx={idx}
                       calc={calcedItems[idx]}
+                      isOverseas={isOverseas}
+                      exchangeRate={exchangeRate}
                       onEdit={() => openEditModal(item.id)}
                       onRemove={() => removeItem(item.id)}
                     />
@@ -270,9 +372,16 @@ export default function QuotationPage({ showToast }) {
           {/* 합계 */}
           {items.length > 0 && (
             <div className="summary-row">
-              <div className="summary-cell"><span className="label">공급가액</span><span className="value">₩{fmtNumber(totalSupply)}</span></div>
-              <div className="summary-cell"><span className="label">부가세 (10%)</span><span className="value">₩{fmtNumber(totalVat)}</span></div>
-              <div className="summary-cell total"><span className="label">합계 TOTAL</span><span className="value">₩{fmtNumber(grandTotal)}</span></div>
+              {isOverseas ? (
+                <div className="summary-cell total">
+                  <span className="label">TOTAL (USD)</span>
+                  <span className="value">${totalUSD.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                </div>
+              ) : (<>
+                <div className="summary-cell"><span className="label">공급가액</span><span className="value">₩{fmtNumber(totalSupply)}</span></div>
+                <div className="summary-cell"><span className="label">부가세 (10%)</span><span className="value">₩{fmtNumber(totalVat)}</span></div>
+                <div className="summary-cell total"><span className="label">합계 TOTAL</span><span className="value">₩{fmtNumber(grandTotal)}</span></div>
+              </>)}
             </div>
           )}
         </div>
@@ -292,12 +401,8 @@ export default function QuotationPage({ showToast }) {
 
       {/* 품목 팝업 */}
       {itemModal && (
-        <ItemModal
-          item={itemModal.item}
-          productList={productList}
-          onSave={handleItemSave}
-          onClose={() => setItemModal(null)}
-        />
+        <ItemModal item={itemModal.item} productList={productList}
+          onSave={handleItemSave} onClose={() => setItemModal(null)}/>
       )}
     </div>
   );

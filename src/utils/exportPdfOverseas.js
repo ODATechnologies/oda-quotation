@@ -1,12 +1,17 @@
 import { fmtNumber } from "./helpers";
 import logoSrc from "../assets/logo.png";
 
-export function exportToPdf(data) {
-  const { docNo, staff, supplier, customer, contact, items, terms, totalSupply, totalVat, grandTotal } = data;
+export function exportToPdfOverseas(data) {
+  const { docNo, staff, supplier, customer, contact, items, terms, totalUSD, exchangeRate } = data;
   const shortNo  = docNo.replace("ODA-", "");
   const fileName = `Quotation for ${customer} ${shortNo}`;
   const ODA  = "#F84F04";
   const DARK = "#1a1a1a";
+
+  const fmtUSD = (n) => {
+    if (!n && n !== 0) return "-";
+    return "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  };
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -29,24 +34,18 @@ body{
   body{padding:32px 34px;}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
 }
-
-/* 상단 */
 .top-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;flex-shrink:0;}
 .logo-wrap img{height:36px;object-fit:contain;display:block;}
 .title-block{text-align:right;}
 .quotation-title{font-size:22px;font-weight:800;letter-spacing:7px;color:#111;display:block;line-height:1;}
 .subtitle{font-size:6.5px;letter-spacing:2.5px;color:#aaa;margin-top:3px;display:block;text-transform:uppercase;}
 .orange-bar{height:2.5px;background:${ODA};margin-bottom:12px;flex-shrink:0;}
-
-/* INFO */
 .info-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;flex-shrink:0;}
 .info-box{border:1px solid #ccc;}
 .info-title{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.1em;display:block;width:100%;}
 .info-row{display:flex;border-top:1px solid #e0e0e0;}
 .info-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:62px;width:62px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
 .info-value{padding:3.5px 6px;font-size:7.5px;color:#111;display:flex;align-items:center;flex:1;}
-
-/* 품목 테이블 */
 .item-table{width:100%;border-collapse:collapse;font-size:8px;flex-shrink:0;}
 .item-table thead tr{background:${ODA};}
 .item-table th{color:#fff;padding:5.5px 4px;text-align:center;font-size:7px;font-weight:700;border-right:1px solid rgba(255,255,255,.3);white-space:nowrap;}
@@ -56,80 +55,24 @@ body{
 .item-table tr:nth-child(even) td{background:#fafafa;}
 .detail-row td{background:#f4f6fb!important;color:#666;font-size:7px;padding:2.5px 5px 2.5px 14px;border-bottom:1px solid #efefef;font-style:italic;}
 td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
-
 .spacer{flex:1;min-height:60px;max-height:120px;}
-
-/* ── TERMS + 합계: 완전한 table 레이아웃 ── */
 .bottom-wrap{flex-shrink:0;width:100%;}
-.bottom-wrap table{
-  width:100%;
-  border-collapse:separate;
-  border-spacing:8px 0;
-  table-layout:fixed;
-}
-.bottom-wrap table td{
-  width:50%;
-  vertical-align:top;
-  padding:0;
-}
-
-/* TERMS 박스 — table 내부를 또 table로 구성 */
-.terms-table{
-  width:100%;
-  border-collapse:collapse;
-  border:1px solid #ccc;
-}
-.terms-table .terms-hdr{
-  background:${DARK};
-  color:#fff;
-  font-size:7px;
-  font-weight:700;
-  padding:3.5px 7px;
-  letter-spacing:.08em;
-}
-.terms-table .terms-row td{
-  border-top:1px solid #e0e0e0;
-  padding:3.5px 6px;
-  font-size:7.5px;
-}
-.terms-table .terms-row td:first-child{
-  background:#f4f4f4;
-  font-weight:700;
-  font-size:7px;
-  color:#555;
-  width:54px;
-  border-right:1px solid #e0e0e0;
-}
-
-/* 합계 박스 */
-.amt-table{
-  width:100%;
-  border-collapse:collapse;
-  border:1px solid #ccc;
-}
-.amt-table tr td{
-  padding:5px 9px;
-  font-size:8px;
-  border-bottom:1px solid #e0e0e0;
-}
-.amt-table tr:last-child td{ border-bottom:none; }
-.amt-table .amt-label{ text-align:left; }
-.amt-table .amt-value{ text-align:right; }
-.amt-table .total-row td{
-  background:${ODA};
-  color:#fff;
-  font-weight:800;
-  font-size:10.5px;
-  padding:7px 9px;
-  border-bottom:none;
-}
-
+.bottom-wrap table{width:100%;border-collapse:separate;border-spacing:8px 0;table-layout:fixed;}
+.bottom-wrap table td{width:50%;vertical-align:top;padding:0;}
+.terms-table{width:100%;border-collapse:collapse;border:1px solid #ccc;}
+.terms-table .terms-hdr{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.08em;}
+.terms-table .terms-row td{border-top:1px solid #e0e0e0;padding:3.5px 6px;font-size:7.5px;}
+.terms-table .terms-row td:first-child{background:#f4f4f4;font-weight:700;font-size:7px;color:#555;width:54px;border-right:1px solid #e0e0e0;}
+.amt-table{width:100%;border-collapse:collapse;border:1px solid #ccc;}
+.amt-table tr td{padding:5px 9px;font-size:8px;border-bottom:1px solid #e0e0e0;}
+.amt-table tr:last-child td{border-bottom:none;}
+.amt-table .total-row td{background:${ODA};color:#fff;font-weight:800;font-size:10.5px;padding:7px 9px;border-bottom:none;}
+/* 환율 안내 */
+.exrate-chip{display:inline-block;background:#EEF3FF;color:#2563EB;font-size:6.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:10px;}
 .footer{margin-top:10px;text-align:center;color:#bbb;font-size:6.5px;border-top:1px solid #eee;padding-top:6px;flex-shrink:0;}
 </style>
 </head>
 <body>
-
-<!-- 헤더 -->
 <div class="top-header">
   <div class="logo-wrap"><img src="${logoSrc}" alt="ODA Technologies"/></div>
   <div class="title-block">
@@ -139,7 +82,8 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 </div>
 <div class="orange-bar"></div>
 
-<!-- INFO -->
+${exchangeRate ? `<div><span class="exrate-chip">Exchange Rate: ₩${fmtNumber(exchangeRate)} / USD 1</span></div>` : ""}
+
 <div class="info-wrap">
   <div class="info-box">
     <div class="info-title">CUSTOMER</div>
@@ -158,18 +102,16 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
   </div>
 </div>
 
-<!-- 품목 -->
 <table class="item-table">
   <thead>
     <tr>
       <th style="width:20px">NO</th>
-      <th style="text-align:center;width:22%">Description</th>
-      <th style="text-align:center;width:14%">Model</th>
+      <th style="width:22%">Description</th>
+      <th style="width:14%">Model</th>
       <th style="width:28px">Qty</th>
-      <th style="width:13%">Unit Price</th>
-      <th style="width:13%">Amount</th>
-      <th style="width:10%">VAT</th>
-      <th style="text-align:center">Remark</th>
+      <th style="width:14%">Unit Price (USD)</th>
+      <th style="width:14%">Amount (USD)</th>
+      <th style="text-align:left">Remark</th>
     </tr>
   </thead>
   <tbody>
@@ -179,23 +121,20 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
       <td class="b">${item.category||''}</td>
       <td>${item.spec||''}</td>
       <td class="c">${item.qty}</td>
-      <td class="r">${fmtNumber(item.unitPrice)}</td>
-      <td class="r b">${fmtNumber(item.amount)}</td>
-      <td class="r">${fmtNumber(item.vat)}</td>
+      <td class="r">${fmtUSD(item.unitPriceUSD)}</td>
+      <td class="r b">${fmtUSD(item.amountUSD)}</td>
       <td>${item.note||''}</td>
     </tr>
-    ${(item.details||[]).map(d=>`<tr class="detail-row"><td></td><td colspan="7">- ${d}</td></tr>`).join('')}
+    ${(item.details||[]).map(d=>`<tr class="detail-row"><td></td><td colspan="6">- ${d}</td></tr>`).join('')}
     `).join('')}
   </tbody>
 </table>
 
 <div class="spacer"></div>
 
-<!-- TERMS & 합계: 완전한 table-in-table 방식 -->
 <div class="bottom-wrap">
   <table>
     <tr>
-      <!-- TERMS -->
       <td>
         <table class="terms-table">
           <tr><td colspan="2" class="terms-hdr">TERMS &amp; CONDITIONS</td></tr>
@@ -204,12 +143,12 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
           <tr class="terms-row"><td>Payment</td><td>${terms.payment||''}</td></tr>
         </table>
       </td>
-      <!-- 합계 -->
       <td>
         <table class="amt-table">
-          <tr><td class="amt-label">Supply Amount</td><td class="amt-value">₩ ${fmtNumber(totalSupply)}</td></tr>
-          <tr><td class="amt-label">VAT (10%)</td><td class="amt-value">₩ ${fmtNumber(totalVat)}</td></tr>
-          <tr class="total-row"><td class="amt-label">TOTAL</td><td class="amt-value">₩ ${fmtNumber(grandTotal)}</td></tr>
+          <tr class="total-row">
+            <td class="amt-label">TOTAL (USD)</td>
+            <td style="text-align:right;font-weight:800">${fmtUSD(totalUSD)}</td>
+          </tr>
         </table>
       </td>
     </tr>
@@ -221,7 +160,6 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
   Date: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} &nbsp;|&nbsp;
   ODA Technologies Co., Ltd.
 </div>
-
 <script>
 document.fonts.ready.then(function(){
   setTimeout(function(){

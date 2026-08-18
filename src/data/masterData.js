@@ -14,3 +14,8 @@ export const SUPPLIER_INFO = {
   name: "㈜오디에이테크놀로지",
   bizNo: "122-86-05459",
 };
+
+export const SUPPLIER_INFO_OVERSEAS = {
+  name: "ODA Technologies Co., Ltd.",
+  bizNo: "122-86-05459",
+};

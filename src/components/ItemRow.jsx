@@ -1,7 +1,11 @@
 import { fmtNumber } from "../utils/helpers";
 
 // 메인 테이블에서는 간략하게만 표시, 클릭하면 팝업 오픈
-export default function ItemRow({ item, idx, calc, onEdit, onRemove }) {
+export default function ItemRow({ item, idx, calc, onEdit, onRemove, isOverseas, exchangeRate }) {
+  const fmtUSD = (n) => {
+    if (!n && n !== 0) return "-";
+    return "$" + Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+  };
   return (
     <>
       <tr
@@ -30,7 +34,9 @@ export default function ItemRow({ item, idx, calc, onEdit, onRemove }) {
 
         {/* 단가 */}
         <td style={{ textAlign:"right", fontSize:13 }}>
-          {calc?.unitPrice ? `₩${fmtNumber(calc.unitPrice)}` : "-"}
+          {isOverseas
+            ? (calc?.unitPriceUSD ? fmtUSD(calc.unitPriceUSD) : "-")
+            : (calc?.unitPrice ? `₩${fmtNumber(calc.unitPrice)}` : "-")}
           {item.dc && !item.manualPrice && (
             <div style={{ fontSize:10, color:"var(--success)", fontWeight:600 }}>DC {item.dc}%</div>
           )}
@@ -41,13 +47,17 @@ export default function ItemRow({ item, idx, calc, onEdit, onRemove }) {
 
         {/* 금액 */}
         <td style={{ textAlign:"right", fontWeight:700, color:"var(--primary)" }}>
-          {calc?.amount ? `₩${fmtNumber(calc.amount)}` : "-"}
+          {isOverseas
+            ? (calc?.amountUSD ? fmtUSD(calc.amountUSD) : "-")
+            : (calc?.amount ? `₩${fmtNumber(calc.amount)}` : "-")}
         </td>
 
-        {/* 부가세 */}
-        <td style={{ textAlign:"right", color:"var(--text-sub)", fontSize:12 }}>
-          {calc?.vat ? `₩${fmtNumber(calc.vat)}` : "-"}
-        </td>
+        {/* 부가세 (국내만) */}
+        {!isOverseas && (
+          <td style={{ textAlign:"right", color:"var(--text-sub)", fontSize:12 }}>
+            {calc?.vat ? `₩${fmtNumber(calc.vat)}` : "-"}
+          </td>
+        )}
 
         {/* 비고 */}
         <td style={{ fontSize:12, color:"var(--text-sub)" }}>{item.note || ""}</td>
