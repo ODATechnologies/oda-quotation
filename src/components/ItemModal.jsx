@@ -1,12 +1,24 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { fmtNumber, applyDC, calcItem } from "../utils/helpers";
+import { fmtNumber, calcItem } from "../utils/helpers";
 
-export default function ItemModal({ item, productList, onSave, onClose }) {
+export default function ItemModal({ item, productList, onSave, onClose, isOverseas, exchangeRate }) {
   const [form, setForm] = useState({ ...item });
   const [specSearch, setSpecSearch] = useState(item.spec || "");
   const [showDrop,   setShowDrop]   = useState(false);
   const searchRef = useRef(null);
   const dropRef   = useRef(null);
+
+  const rate = Number(exchangeRate) || 1350;
+
+  // KRW → USD 변환
+  const toUSD = (krw) => {
+    if (!krw && krw !== 0) return null;
+    return Math.round((Number(krw) / rate) * 100) / 100;
+  };
+  const fmtUSD = (n) => {
+    if (n === null || n === undefined) return "";
+    return "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
+  };
 
   // 전체 규격 flat
   const allSpecs = useMemo(() => {
@@ -14,12 +26,9 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
     (productList || []).forEach(cat => {
       (cat.specs || []).forEach(s => {
         result.push({
-          catId:    cat._id || cat.id,
-          catName:  cat.category,
-          specId:   s.id,
-          spec:     s.spec,
-          listPrice:s.listPrice,
-          details:  s.details || [],
+          catId: cat._id || cat.id, catName: cat.category,
+          specId: s.id, spec: s.spec,
+          listPrice: s.listPrice, details: s.details || [],
           isShared: cat._type === "shared" || !cat._type,
         });
       });
@@ -37,7 +46,6 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
     );
   }, [allSpecs, specSearch]);
 
-  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     function handleClick(e) {
       if (dropRef.current && !dropRef.current.contains(e.target)) setShowDrop(false);
@@ -49,14 +57,9 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
   function selectSpec(s) {
     setForm(f => ({
       ...f,
-      category:    s.catName,
-      spec:        s.spec,
-      specId:      s.specId,
-      listPrice:   s.listPrice,
-      dc:          "",
-      manualPrice: false,
-      unitPrice:   s.listPrice,
-      details:     s.details,
+      category: s.catName, spec: s.spec, specId: s.specId,
+      listPrice: s.listPrice, dc: "", manualPrice: false,
+      unitPrice: s.listPrice, details: s.details,
     }));
     setSpecSearch(s.spec);
     setShowDrop(false);
@@ -68,15 +71,10 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
     setTimeout(() => searchRef.current?.focus(), 50);
   }
 
-  // 실시간 계산
   const calc = useMemo(() => calcItem(form), [form]);
-
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
 
-  function handleSave() {
-    onSave({ ...calc });
-    onClose();
-  }
+  function handleSave() { onSave({ ...calc }); onClose(); }
 
   const inputStyle = {
     width:"100%", padding:"9px 12px",
@@ -85,30 +83,50 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
   };
   const labelStyle = { fontSize:12, fontWeight:600, color:"var(--text-sub)", display:"block", marginBottom:5 };
 
+  // 금액 듀얼 표시 컴포넌트
+  const DualPrice = ({ krw, label }) => {
+    if (!krw && krw !== 0) return null;
+    const usd = toUSD(krw);
+    return (
+      <div style={{ marginTop:4, display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+        <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>₩{fmtNumber(krw)}</span>
+        {isOverseas && usd !== null && (
+          <>
+            <span style={{ color:"var(--text-muted)", fontSize:12 }}>→</span>
+            <span style={{ fontSize:13, fontWeight:700, color:"#059669" }}>{fmtUSD(usd)}</span>
+            <span style={{ fontSize:11, color:"var(--text-muted)" }}>(₩{fmtNumber(rate)}/USD)</span>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div style={{
-      position:"fixed", inset:0,
-      background:"rgba(0,0,0,.5)",
-      display:"flex", alignItems:"center", justifyContent:"center",
-      zIndex:1000,
-    }}
-      onClick={e => { if(e.target===e.currentTarget) onClose(); }}
-    >
+      position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
+      display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000,
+    }} onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
       <div style={{
         background:"#fff", borderRadius:12,
         boxShadow:"0 8px 40px rgba(0,0,0,.18)",
-        width:"min(780px, 95vw)",
-        maxHeight:"90vh", overflowY:"auto",
+        width:"min(780px, 95vw)", maxHeight:"90vh", overflowY:"auto",
         display:"flex", flexDirection:"column",
       }}>
-        {/* 팝업 헤더 */}
+        {/* 헤더 */}
         <div style={{
           padding:"18px 24px", borderBottom:"1px solid var(--border)",
           display:"flex", alignItems:"center", justifyContent:"space-between",
           position:"sticky", top:0, background:"#fff", zIndex:10,
         }}>
           <div>
-            <div style={{ fontSize:16, fontWeight:700, color:"var(--primary)" }}>품목 입력</div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:16, fontWeight:700, color:"var(--primary)" }}>품목 입력</span>
+              {isOverseas && (
+                <span style={{ background:"#EEF3FF", color:"#2563EB", fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:20 }}>
+                  🌐 해외 · ₩{fmtNumber(rate)} = $1
+                </span>
+              )}
+            </div>
             {form.category && <div style={{ fontSize:12, color:"var(--text-muted)", marginTop:2 }}>{form.category}</div>}
           </div>
           <button onClick={onClose} style={{ background:"none", border:"none", fontSize:20, cursor:"pointer", color:"var(--text-muted)", padding:"4px 8px" }}>✕</button>
@@ -119,11 +137,7 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
           {/* 규격 검색 */}
           <div ref={dropRef} style={{ position:"relative" }}>
             <label style={labelStyle}>규격 검색 <span style={{color:"var(--danger)"}}>*</span></label>
-            <div style={{
-              display:"flex", alignItems:"center", gap:8,
-              border:"1px solid var(--border)", borderRadius:6,
-              padding:"4px 12px", background:"#fff",
-            }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, border:"1px solid var(--border)", borderRadius:6, padding:"4px 12px", background:"#fff" }}>
               <span style={{ fontSize:14, color:"var(--text-muted)" }}>🔍</span>
               <input
                 ref={searchRef}
@@ -134,35 +148,22 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
                 style={{ flex:1, border:"none", outline:"none", fontSize:14, padding:"6px 0", fontFamily:"inherit" }}
               />
               {form.spec && (
-                <button onClick={clearSpec} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-muted)", fontSize:16, padding:"0 4px" }}>✕</button>
+                <button onClick={clearSpec} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-muted)", fontSize:16 }}>✕</button>
               )}
             </div>
-            {specSearch && !form.spec && (
-              <div style={{ fontSize:12, color:"var(--text-muted)", marginTop:4 }}>
-                {filteredSpecs.length}개 규격 검색됨
-              </div>
-            )}
 
-            {/* 드롭다운 */}
             {showDrop && (
               <div style={{
-                position:"absolute", top:"calc(100% + 4px)", left:0, right:0,
-                zIndex:200, background:"#fff",
-                border:"1px solid var(--border)", borderRadius:8,
-                boxShadow:"0 8px 32px rgba(0,0,0,.12)",
-                maxHeight:280, overflowY:"auto",
+                position:"absolute", top:"calc(100% + 4px)", left:0, right:0, zIndex:200,
+                background:"#fff", border:"1px solid var(--border)", borderRadius:8,
+                boxShadow:"0 8px 32px rgba(0,0,0,.12)", maxHeight:280, overflowY:"auto",
               }}>
                 {filteredSpecs.length === 0 ? (
                   <div style={{ padding:"20px 16px", textAlign:"center", color:"var(--text-muted)", fontSize:13 }}>검색 결과가 없습니다.</div>
                 ) : filteredSpecs.map(s => (
                   <div key={`${s.catId}-${s.specId}`}
                     onClick={() => selectSpec(s)}
-                    style={{
-                      padding:"12px 16px", cursor:"pointer",
-                      borderBottom:"1px solid #f4f4f4",
-                      display:"grid", gridTemplateColumns:"1fr auto",
-                      alignItems:"center", gap:16,
-                    }}
+                    style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid #f4f4f4", display:"grid", gridTemplateColumns:"1fr auto", alignItems:"center", gap:16 }}
                     onMouseEnter={e => e.currentTarget.style.background="#F5F7FF"}
                     onMouseLeave={e => e.currentTarget.style.background="#fff"}
                   >
@@ -178,8 +179,11 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
                         </div>
                       )}
                     </div>
-                    <div style={{ fontSize:14, fontWeight:700, color:"var(--primary)", whiteSpace:"nowrap" }}>
-                      ₩{fmtNumber(s.listPrice)}
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>₩{fmtNumber(s.listPrice)}</div>
+                      {isOverseas && (
+                        <div style={{ fontSize:11, color:"#059669", marginTop:2 }}>{fmtUSD(toUSD(s.listPrice))}</div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -187,7 +191,7 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
             )}
           </div>
 
-          {/* 선택된 사양 표시 */}
+          {/* 상세 사양 */}
           {form.details?.length > 0 && (
             <div style={{ background:"var(--surface2)", borderRadius:6, padding:"12px 14px" }}>
               <div style={{ fontSize:11, fontWeight:700, color:"var(--text-muted)", marginBottom:6, textTransform:"uppercase", letterSpacing:".05em" }}>상세 사양</div>
@@ -212,6 +216,7 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
                 onChange={e => { const v=e.target.value.replace(/,/g,""); set("listPrice",v); if(!form.manualPrice) set("unitPrice",v); }}
                 placeholder="0"
                 style={{ ...inputStyle, textAlign:"right" }}/>
+              <DualPrice krw={Number(form.listPrice)||0} />
             </div>
             <div>
               <label style={labelStyle}>DC율 (%)</label>
@@ -230,7 +235,7 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
             </div>
           </div>
 
-          {/* 단가 (적용) */}
+          {/* 단가 / 비고 */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
             <div>
               <label style={labelStyle}>
@@ -245,53 +250,60 @@ export default function ItemModal({ item, productList, onSave, onClose }) {
                   ...inputStyle, textAlign:"right",
                   color: form.manualPrice ? "var(--accent)" : form.dc ? "var(--success)" : "inherit",
                   fontWeight: form.manualPrice || form.dc ? 600 : 400,
-                  fontSize:15,
                 }}/>
+              <DualPrice krw={calc.unitPrice} />
             </div>
             <div>
               <label style={labelStyle}>비고</label>
               <input value={form.note} onChange={e => set("note", e.target.value)}
-                placeholder="납기, 특이사항 등"
-                style={inputStyle}/>
+                placeholder="납기, 특이사항 등" style={inputStyle}/>
             </div>
           </div>
 
           {/* 계산 결과 요약 */}
           <div style={{
             background:"linear-gradient(135deg,#1E3C78 0%,#2563EB 100%)",
-            borderRadius:10, padding:"16px 20px",
-            display:"grid", gridTemplateColumns:"1fr 1fr 1fr",
-            gap:0, color:"#fff",
+            borderRadius:10, padding:"16px 20px", color:"#fff",
           }}>
-            {[
-              ["공급가액", `₩${fmtNumber(calc.amount)}`],
-              ["부가세 (10%)", `₩${fmtNumber(calc.vat)}`],
-              ["합계", `₩${fmtNumber(calc.amount + calc.vat)}`],
-            ].map(([label, value], i) => (
-              <div key={label} style={{
-                textAlign:"center",
-                borderRight: i < 2 ? "1px solid rgba(255,255,255,.2)" : "none",
-                padding:"0 16px",
-              }}>
-                <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>{label}</div>
-                <div style={{ fontSize:i===2?18:15, fontWeight:700 }}>{value}</div>
+            {isOverseas ? (
+              /* 해외: KRW + USD 동시 표시 */
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
+                <div style={{ textAlign:"center", borderRight:"1px solid rgba(255,255,255,.2)", paddingRight:16 }}>
+                  <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>금액 (KRW)</div>
+                  <div style={{ fontSize:15, fontWeight:700 }}>₩{fmtNumber(calc.amount)}</div>
+                </div>
+                <div style={{ textAlign:"center", paddingLeft:16 }}>
+                  <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>금액 (USD)</div>
+                  <div style={{ fontSize:18, fontWeight:800, color:"#86EFAC" }}>{fmtUSD(toUSD(calc.amount))}</div>
+                  <div style={{ fontSize:10, opacity:.6, marginTop:2 }}>₩{fmtNumber(rate)} = $1</div>
+                </div>
               </div>
-            ))}
+            ) : (
+              /* 국내: 공급가액 / 부가세 / 합계 */
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:0 }}>
+                {[
+                  ["공급가액", `₩${fmtNumber(calc.amount)}`],
+                  ["부가세 (10%)", `₩${fmtNumber(calc.vat)}`],
+                  ["합계", `₩${fmtNumber(calc.amount + calc.vat)}`],
+                ].map(([label, value], i) => (
+                  <div key={label} style={{ textAlign:"center", borderRight:i<2?"1px solid rgba(255,255,255,.2)":"none", padding:"0 16px" }}>
+                    <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>{label}</div>
+                    <div style={{ fontSize:i===2?18:15, fontWeight:700 }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* 푸터 버튼 */}
+        {/* 푸터 */}
         <div style={{
           padding:"14px 24px", borderTop:"1px solid var(--border)",
           display:"flex", justifyContent:"flex-end", gap:8,
           position:"sticky", bottom:0, background:"#fff",
         }}>
           <button className="btn btn-secondary" onClick={onClose}>취소</button>
-          <button className="btn btn-primary"
-            onClick={handleSave}
-            style={{ minWidth:100 }}>
-            확인
-          </button>
+          <button className="btn btn-primary" onClick={handleSave} style={{ minWidth:100 }}>확인</button>
         </div>
       </div>
     </div>

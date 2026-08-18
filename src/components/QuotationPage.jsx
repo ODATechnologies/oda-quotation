@@ -402,6 +402,7 @@ export default function QuotationPage({ showToast }) {
       {/* 품목 팝업 */}
       {itemModal && (
         <ItemModal item={itemModal.item} productList={productList}
+          isOverseas={isOverseas} exchangeRate={exchangeRate}
           onSave={handleItemSave} onClose={() => setItemModal(null)}/>
       )}
     </div>

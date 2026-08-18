@@ -82,7 +82,7 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 </div>
 <div class="orange-bar"></div>
 
-${exchangeRate ? `<div><span class="exrate-chip">Exchange Rate: ₩${fmtNumber(exchangeRate)} / USD 1</span></div>` : ""}
+
 
 <div class="info-wrap">
   <div class="info-box">
