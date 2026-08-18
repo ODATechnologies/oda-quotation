@@ -35,12 +35,16 @@ body{
 .quotation-title{font-size:22px;font-weight:800;letter-spacing:7px;color:#111;display:block;line-height:1;}
 .subtitle{font-size:6.5px;letter-spacing:2.5px;color:#aaa;margin-top:3px;display:block;text-transform:uppercase;}
 .orange-bar{height:2.5px;background:${ODA};margin-bottom:12px;flex-shrink:0;}
+
+/* INFO */
 .info-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;flex-shrink:0;}
 .info-box{border:1px solid #ccc;}
-.info-title{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.1em;}
+.info-title{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.1em;display:block;width:100%;}
 .info-row{display:flex;border-top:1px solid #e0e0e0;}
 .info-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:62px;width:62px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
 .info-value{padding:3.5px 6px;font-size:7.5px;color:#111;display:flex;align-items:center;flex:1;}
+
+/* 품목 */
 .item-table{width:100%;border-collapse:collapse;font-size:8px;flex-shrink:0;}
 .item-table thead tr{background:${ODA};}
 .item-table th{color:#fff;padding:5.5px 4px;text-align:center;font-size:7px;font-weight:700;border-right:1px solid rgba(255,255,255,.3);white-space:nowrap;}
@@ -50,33 +54,36 @@ body{
 .item-table tr:nth-child(even) td{background:#fafafa;}
 .detail-row td{background:#f4f6fb!important;color:#666;font-size:7px;padding:2.5px 5px 2.5px 14px;border-bottom:1px solid #efefef;font-style:italic;}
 td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
+
 .spacer{flex:1;min-height:60px;max-height:120px;}
 
-/* ── TERMS & 합계: 핵심 수정 ── */
-.bottom-section{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:8px;
-  flex-shrink:0;
-  align-items:start;   /* 높이를 내용에 맞게 */
-}
-.terms-box{border:1px solid #ccc;overflow:hidden;}
-.terms-title{
+/* ── TERMS & 합계: table 방식으로 완전 교체 ── */
+.bottom-table{width:100%;border-collapse:collapse;flex-shrink:0;}
+.bottom-table td{vertical-align:top;width:50%;padding:0;}
+.bottom-table td+td{padding-left:8px;}
+
+/* TERMS */
+.terms-box{border:1px solid #ccc;border-collapse:collapse;width:100%;}
+.terms-box .t-hdr{
   background:${DARK};color:#fff;
-  font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.08em;
-  display:block;         /* block으로 명시 */
+  font-size:7px;font-weight:700;letter-spacing:.08em;
+  padding:3.5px 7px;
 }
-.terms-row{display:flex;border-top:1px solid #e0e0e0;}
-.terms-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:54px;width:54px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
-.terms-value{padding:3.5px 6px;font-size:7.5px;flex:1;display:flex;align-items:center;}
-.amt-box{border:1px solid #ccc;overflow:hidden;}
-.amt-row{display:flex;justify-content:space-between;align-items:center;padding:5px 9px;border-bottom:1px solid #e0e0e0;font-size:8px;}
-.amt-row:last-child{border-bottom:none;}
-.amt-row.total{
-  background:${ODA};color:#fff;
-  font-weight:800;font-size:10.5px;padding:7px 9px;
-  display:flex;             /* flex 명시 */
+.terms-box .t-row{display:flex;border-top:1px solid #e0e0e0;}
+.terms-box .t-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:54px;width:54px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
+.terms-box .t-val{padding:3.5px 6px;font-size:7.5px;flex:1;display:flex;align-items:center;}
+
+/* 합계 */
+.amt-box{border:1px solid #ccc;width:100%;}
+.amt-box .a-row{display:flex;justify-content:space-between;align-items:center;padding:5px 9px;border-bottom:1px solid #e0e0e0;font-size:8px;}
+.amt-box .a-row.last{border-bottom:none;}
+.amt-box .a-total{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:7px 9px;
+  background:${ODA};
+  color:#fff;font-weight:800;font-size:10.5px;
 }
+
 .footer{margin-top:10px;text-align:center;color:#bbb;font-size:6.5px;border-top:1px solid #eee;padding-top:6px;flex-shrink:0;}
 </style>
 </head>
@@ -89,6 +96,7 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
   </div>
 </div>
 <div class="orange-bar"></div>
+
 <div class="info-wrap">
   <div class="info-box">
     <div class="info-title">CUSTOMER</div>
@@ -106,6 +114,7 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
     <div class="info-row"><div class="info-label">Phone</div><div class="info-value">${staff.phone||''}</div></div>
   </div>
 </div>
+
 <table class="item-table">
   <thead>
     <tr>
@@ -135,20 +144,30 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
     `).join('')}
   </tbody>
 </table>
+
 <div class="spacer"></div>
-<div class="bottom-section">
-  <div class="terms-box">
-    <div class="terms-title">TERMS &amp; CONDITIONS</div>
-    <div class="terms-row"><div class="terms-label">Delivery</div><div class="terms-value">${terms.delivery||''}</div></div>
-    <div class="terms-row"><div class="terms-label">Validity</div><div class="terms-value">${terms.validity||''}</div></div>
-    <div class="terms-row"><div class="terms-label">Payment</div><div class="terms-value">${terms.payment||''}</div></div>
-  </div>
-  <div class="amt-box">
-    <div class="amt-row"><span>Supply Amount</span><span>₩ ${fmtNumber(totalSupply)}</span></div>
-    <div class="amt-row"><span>VAT (10%)</span><span>₩ ${fmtNumber(totalVat)}</span></div>
-    <div class="amt-row total"><span>TOTAL</span><span>₩ ${fmtNumber(grandTotal)}</span></div>
-  </div>
-</div>
+
+<!-- TERMS & 합계: table로 나란히 배치 (색상 문제 완전 해결) -->
+<table class="bottom-table">
+  <tr>
+    <td>
+      <div class="terms-box">
+        <div class="t-hdr">TERMS &amp; CONDITIONS</div>
+        <div class="t-row"><div class="t-label">Delivery</div><div class="t-val">${terms.delivery||''}</div></div>
+        <div class="t-row"><div class="t-label">Validity</div><div class="t-val">${terms.validity||''}</div></div>
+        <div class="t-row"><div class="t-label">Payment</div><div class="t-val">${terms.payment||''}</div></div>
+      </div>
+    </td>
+    <td>
+      <div class="amt-box">
+        <div class="a-row"><span>Supply Amount</span><span>₩ ${fmtNumber(totalSupply)}</span></div>
+        <div class="a-row last"><span>VAT (10%)</span><span>₩ ${fmtNumber(totalVat)}</span></div>
+        <div class="a-total"><span>TOTAL</span><span>₩ ${fmtNumber(grandTotal)}</span></div>
+      </div>
+    </td>
+  </tr>
+</table>
+
 <div class="footer">
   We hereby submit our quotation as above. &nbsp;|&nbsp;
   Date: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} &nbsp;|&nbsp;

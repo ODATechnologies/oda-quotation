@@ -1,60 +1,55 @@
 import {
   collection, doc, setDoc, getDocs, deleteDoc,
-  query, where, orderBy, serverTimestamp, getDoc,
+  query, where, orderBy, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
 const COL = "quote_history";
 
-// 견적 저장 (Firestore)
 export async function saveQuote(quoteData) {
-  const id  = quoteData.docNo.replace(/[^a-zA-Z0-9-]/g, "_");
-  const ref = doc(db, COL, id);
-  await setDoc(ref, {
+  const id  = quoteData.docNo.replace(/[^a-zA-Z0-9]/g, "_");
+  await setDoc(doc(db, COL, id), {
     ...quoteData,
     savedAt: serverTimestamp(),
   }, { merge: true });
 }
 
-// 특정 업체 견적 이력
+// where만 사용 (복합 인덱스 불필요) → 클라이언트에서 정렬
 export async function getHistoryByCustomer(customerName) {
   if (!customerName) return [];
   try {
-    const q    = query(
-      collection(db, COL),
-      where("customer", "==", customerName),
-      orderBy("savedAt", "desc")
+    const snap = await getDocs(
+      query(collection(db, COL), where("customer", "==", customerName))
     );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({
+    const result = snap.docs.map(d => ({
       ...d.data(),
-      docNo: d.id.replace(/_/g, "-"),
+      docNo:   d.id.replace(/_/g, "-"),
       savedAt: d.data().savedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
     }));
+    // 클라이언트에서 최신순 정렬
+    return result.sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
   } catch(e) {
-    console.error("이력 조회 오류:", e);
+    console.error("이력 조회 오류:", e.message);
     return [];
   }
 }
 
-// 전체 견적 이력 (견적 현황 페이지용)
 export async function getAllHistory() {
   try {
-    const q    = query(collection(db, COL), orderBy("savedAt", "desc"));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({
+    const snap = await getDocs(collection(db, COL));
+    const result = snap.docs.map(d => ({
       ...d.data(),
-      docNo: d.id.replace(/_/g, "-"),
+      docNo:   d.id.replace(/_/g, "-"),
       savedAt: d.data().savedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
     }));
+    return result.sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
   } catch(e) {
-    console.error("전체 이력 조회 오류:", e);
+    console.error("전체 이력 조회 오류:", e.message);
     return [];
   }
 }
 
-// 견적 삭제
 export async function deleteQuote(docNo) {
-  const id = docNo.replace(/[^a-zA-Z0-9-]/g, "_");
+  const id = docNo.replace(/[^a-zA-Z0-9]/g, "_");
   await deleteDoc(doc(db, COL, id));
 }

@@ -1,83 +1,88 @@
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import { fmtNumber } from "./helpers";
-import logoSrc from "../assets/logo.png";
 
-export function exportToExcel(data) {
+// ExcelJS: 스타일 완전 지원
+export async function exportToExcel(data) {
   const { docNo, staff, supplier, customer, contact, items, terms, totalSupply, totalVat, grandTotal } = data;
-  const shortNo  = docNo.replace("ODA-", "");
-  const ODA_COLOR = "F84F04";
-  const DARK_COLOR = "1A1A1A";
-  const WHITE = "FFFFFF";
-  const LIGHT_GRAY = "F4F4F4";
-  const BORDER_COLOR = "CCCCCC";
+  const shortNo = docNo.replace("ODA-", "");
 
-  const wb = XLSX.utils.book_new();
-  const ws = {};
-  const merges = [];
-  let R = 0;
+  const ODA  = "FFF84F04";
+  const DARK = "FF1A1A1A";
+  const WHITE= "FFFFFFFF";
+  const LGRAY= "FFF4F4F4";
+  const BGRAY= "FFFAFAFA";
+  const DBLUE= "FFF4F6FB";
 
-  function addr(r, c) { return XLSX.utils.encode_cell({ r, c }); }
-  function setCell(r, c, v, s) {
-    ws[addr(r,c)] = { v: v ?? "", t: typeof v === "number" ? "n" : "s", s };
-  }
-  function setNum(r, c, v, s) {
-    ws[addr(r,c)] = { v: Number(v)||0, t:"n", z:"#,##0", s };
-  }
-  function merge(r1,c1,r2,c2) { merges.push({ s:{r:r1,c:c1}, e:{r:r2,c:c2} }); }
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Quotation");
+
+  // 열 너비
+  ws.columns = [
+    {width:8},{width:20},{width:8},{width:8},
+    {width:14},{width:6},{width:7},
+    {width:14},{width:4},{width:14},
+    {width:4},{width:13},{width:4},
+    {width:10},{width:4},
+  ];
 
   const border = {
-    top:    { style:"thin", color:{ rgb:BORDER_COLOR } },
-    bottom: { style:"thin", color:{ rgb:BORDER_COLOR } },
-    left:   { style:"thin", color:{ rgb:BORDER_COLOR } },
-    right:  { style:"thin", color:{ rgb:BORDER_COLOR } },
-  };
-  const darkHdr = {
-    font:{ bold:true, color:{ rgb:WHITE }, sz:9 },
-    fill:{ fgColor:{ rgb:DARK_COLOR }, patternType:"solid" },
-    alignment:{ vertical:"center", horizontal:"left" },
-    border,
-  };
-  const odaHdr = {
-    font:{ bold:true, color:{ rgb:WHITE }, sz:9 },
-    fill:{ fgColor:{ rgb:ODA_COLOR }, patternType:"solid" },
-    alignment:{ vertical:"center", horizontal:"center" },
-    border,
-  };
-  const labelCell = {
-    font:{ bold:true, sz:8, color:{ rgb:"555555" } },
-    fill:{ fgColor:{ rgb:LIGHT_GRAY }, patternType:"solid" },
-    alignment:{ vertical:"center", horizontal:"left" },
-    border,
-  };
-  const valueCell = {
-    font:{ sz:9 },
-    alignment:{ vertical:"center", horizontal:"left" },
-    border,
-  };
-  const totalRow = {
-    font:{ bold:true, color:{ rgb:WHITE }, sz:10 },
-    fill:{ fgColor:{ rgb:ODA_COLOR }, patternType:"solid" },
-    alignment:{ vertical:"center", horizontal:"right" },
-    border,
+    top:{style:"thin",color:{argb:"FFCCCCCC"}},
+    left:{style:"thin",color:{argb:"FFCCCCCC"}},
+    bottom:{style:"thin",color:{argb:"FFCCCCCC"}},
+    right:{style:"thin",color:{argb:"FFCCCCCC"}},
   };
 
-  // ── Row 0~1: 제목 (QUOTATION)
-  setCell(R, 0, "QUOTATION", {
-    font:{ bold:true, sz:20, color:{ rgb:"111111" } },
-    alignment:{ vertical:"center", horizontal:"center" },
-  });
-  merge(R, 0, R, 14);
+  function fill(argb) { return { type:"pattern", pattern:"solid", fgColor:{argb} }; }
+  function font(opts) { return { name:"맑은 고딕", size:9, ...opts }; }
+
+  function styleRange(ws, r1, c1, r2, c2, style) {
+    for (let r=r1; r<=r2; r++) {
+      for (let c=c1; c<=c2; c++) {
+        const cell = ws.getCell(r,c);
+        if (style.fill)      cell.fill      = style.fill;
+        if (style.font)      cell.font      = style.font;
+        if (style.alignment) cell.alignment = style.alignment;
+        if (style.border)    cell.border    = border;
+      }
+    }
+  }
+
+  let R = 1; // ExcelJS는 1-indexed
+
+  // ── Row 1: QUOTATION 제목
+  ws.mergeCells(R,1,R,15);
+  const titleCell = ws.getCell(R,1);
+  titleCell.value     = "QUOTATION";
+  titleCell.font      = font({ bold:true, size:18 });
+  titleCell.alignment = { vertical:"middle", horizontal:"center" };
+  ws.getRow(R).height = 30;
   R++;
 
-  // ── Row 1: 빈 행
+  // ── Row 2: 빈 행
   R++;
 
-  // ── Row 2: CUSTOMER / ODA TECHNOLOGIES 헤더
-  setCell(R, 0, "CUSTOMER",        darkHdr); merge(R,0,R,6);
-  setCell(R, 8, "ODA TECHNOLOGIES", darkHdr); merge(R,8,R,14);
+  // ── Row 3: CUSTOMER / ODA TECHNOLOGIES 헤더
+  ws.mergeCells(R,1,R,7);
+  ws.mergeCells(R,9,R,15);
+  const custHdr = ws.getCell(R,1);
+  custHdr.value     = "CUSTOMER";
+  custHdr.fill      = fill(DARK);
+  custHdr.font      = font({ bold:true, color:{argb:WHITE} });
+  custHdr.alignment = { vertical:"middle", horizontal:"left" };
+  custHdr.border    = border;
+  const odaHdr = ws.getCell(R,9);
+  odaHdr.value     = "ODA TECHNOLOGIES";
+  odaHdr.fill      = fill(DARK);
+  odaHdr.font      = font({ bold:true, color:{argb:WHITE} });
+  odaHdr.alignment = { vertical:"middle", horizontal:"left" };
+  odaHdr.border    = border;
+  styleRange(ws,R,2,R,7,{fill:fill(DARK),border});
+  styleRange(ws,R,10,R,15,{fill:fill(DARK),border});
+  ws.getRow(R).height = 16;
   R++;
 
-  // ── Row 3~6: 정보
+  // ── Row 4~8: 정보
   const infoRows = [
     ["Bill To",   customer||"",      "Doc. No.",   docNo],
     ["Attention", contact.name||"",  "Supplier",   supplier.name],
@@ -86,107 +91,140 @@ export function exportToExcel(data) {
     ["",          "",                "Phone",      staff.phone||""],
   ];
   infoRows.forEach(([ll,lv,rl,rv]) => {
-    setCell(R,0,ll,labelCell); merge(R,0,R,0);
-    setCell(R,1,lv,valueCell); merge(R,1,R,6);
-    setCell(R,8,rl,labelCell); merge(R,8,R,8);
-    setCell(R,9,rv,valueCell); merge(R,9,R,14);
+    ws.mergeCells(R,2,R,7);
+    ws.mergeCells(R,10,R,15);
+    const lLabel = ws.getCell(R,1); lLabel.value=ll; lLabel.fill=fill(LGRAY); lLabel.font=font({bold:true,size:8,color:{argb:"FF555555"}}); lLabel.alignment={vertical:"middle"}; lLabel.border=border;
+    const lVal   = ws.getCell(R,2); lVal.value=lv;   lVal.font=font();         lVal.alignment={vertical:"middle"};   lVal.border=border;
+    styleRange(ws,R,2,R,7,{border});
+    const rLabel = ws.getCell(R,9);  rLabel.value=rl; rLabel.fill=fill(LGRAY); rLabel.font=font({bold:true,size:8,color:{argb:"FF555555"}}); rLabel.alignment={vertical:"middle"}; rLabel.border=border;
+    const rVal   = ws.getCell(R,10); rVal.value=rv;   rVal.font=font();         rVal.alignment={vertical:"middle"};   rVal.border=border;
+    styleRange(ws,R,10,R,15,{border});
+    ws.getRow(R).height=15;
     R++;
   });
 
   R++; // 빈 행
 
   // ── 품목 헤더
-  const itemHdrs = [
-    [0,"NO",2],
-    [1,"Description",5],
-    [4,"Model",2],
-    [6,"Qty",1],
-    [7,"Unit Price",2],
-    [9,"Amount",2],
-    [11,"VAT",2],
-    [13,"Remark",2],
+  const hdrDefs = [
+    [1,"NO",1],[2,"Description",3],[5,"Model",2],[7,"Qty",1],
+    [8,"Unit Price",2],[10,"Amount",2],[12,"VAT",2],[14,"Remark",2],
   ];
-  itemHdrs.forEach(([col,label,span]) => {
-    setCell(R, col, label, odaHdr);
-    if (span > 1) merge(R, col, R, col+span-1);
+  hdrDefs.forEach(([c,label,span]) => {
+    if (span>1) ws.mergeCells(R,c,R,c+span-1);
+    const cell = ws.getCell(R,c);
+    cell.value     = label;
+    cell.fill      = fill(ODA);
+    cell.font      = font({ bold:true, color:{argb:WHITE} });
+    cell.alignment = { vertical:"middle", horizontal:"center" };
+    cell.border    = border;
+    // 병합 셀 내 나머지 칸도 스타일
+    for(let i=1;i<span;i++){
+      const mc=ws.getCell(R,c+i);
+      mc.fill=fill(ODA); mc.border=border;
+    }
   });
+  ws.getRow(R).height=18;
   R++;
 
   // ── 품목 행
-  items.forEach((item, idx) => {
-    const even = idx % 2 === 1;
-    const rowBg = even ? "FAFAFA" : "FFFFFF";
-    const rowStyle = {
-      font:{ sz:9 }, border,
-      fill:{ fgColor:{ rgb:rowBg }, patternType:"solid" },
-      alignment:{ vertical:"center" },
-    };
-    const rowStyleR = { ...rowStyle, alignment:{ vertical:"center", horizontal:"right" } };
-    const rowStyleC = { ...rowStyle, alignment:{ vertical:"center", horizontal:"center" } };
-    const rowStyleB = { ...rowStyleR, font:{ sz:9, bold:true } };
+  items.forEach((item,idx) => {
+    const bgArgb = idx%2===1 ? BGRAY : "FFFFFFFF";
+    ws.mergeCells(R,2,R,4);
+    ws.mergeCells(R,5,R,6);
+    ws.mergeCells(R,8,R,9);
+    ws.mergeCells(R,10,R,11);
+    ws.mergeCells(R,12,R,13);
+    ws.mergeCells(R,14,R,15);
 
-    setCell(R,0,idx+1,rowStyleC); merge(R,0,R,0);
-    setCell(R,1,item.category||"",{ ...rowStyle, font:{ sz:9, bold:true } }); merge(R,1,R,3);
-    setCell(R,4,item.spec||"",rowStyle); merge(R,4,R,5);
-    setNum(R,6,item.qty,rowStyleC);
-    setNum(R,7,item.unitPrice,rowStyleR); merge(R,7,R,8);
-    setNum(R,9,item.amount,rowStyleB); merge(R,9,R,10);
-    setNum(R,11,item.vat,rowStyleR); merge(R,11,R,12);
-    setCell(R,13,item.note||"",rowStyle); merge(R,13,R,14);
+    const rowData = [
+      [1, idx+1,           "center"],
+      [2, item.category||"","left"],
+      [5, item.spec||"",    "left"],
+      [7, item.qty||1,      "center"],
+      [8, item.unitPrice||0,"right"],
+      [10,item.amount||0,   "right"],
+      [12,item.vat||0,      "right"],
+      [14,item.note||"",    "left"],
+    ];
+    rowData.forEach(([c,v,align]) => {
+      const cell = ws.getCell(R,c);
+      cell.value     = v;
+      cell.fill      = fill(bgArgb);
+      cell.font      = font(c===2?{bold:true}:{});
+      cell.alignment = { vertical:"middle", horizontal:align };
+      cell.border    = border;
+      if (typeof v==="number" && c!==1 && c!==7) cell.numFmt="#,##0";
+    });
+    for(let c=1;c<=15;c++){
+      const cell=ws.getCell(R,c);
+      if(!cell.fill||!cell.fill.fgColor) { cell.fill=fill(bgArgb); cell.border=border; }
+    }
+    ws.getRow(R).height=16;
     R++;
 
     // 상세 사양
     (item.details||[]).forEach(d => {
-      const detailStyle = {
-        font:{ sz:8, italic:true, color:{ rgb:"666666" } },
-        fill:{ fgColor:{ rgb:"F4F6FB" }, patternType:"solid" },
-        alignment:{ vertical:"center", horizontal:"left" },
-        border,
-      };
-      setCell(R,0,"",detailStyle);
-      setCell(R,1,`- ${d}`,detailStyle); merge(R,1,R,14);
+      ws.mergeCells(R,2,R,15);
+      ws.getCell(R,1).fill=fill(DBLUE); ws.getCell(R,1).border=border;
+      const dc=ws.getCell(R,2);
+      dc.value=`- ${d}`; dc.fill=fill(DBLUE);
+      dc.font=font({italic:true,color:{argb:"FF666666"},size:8});
+      dc.alignment={vertical:"middle",horizontal:"left"};
+      dc.border=border;
+      ws.getRow(R).height=13;
       R++;
     });
   });
 
   R++; // 빈 행
 
-  // ── TERMS & CONDITIONS + 합계
-  setCell(R,0,"TERMS & CONDITIONS",darkHdr); merge(R,0,R,6);
-  setCell(R,8,"Supply Amount",valueCell); merge(R,8,R,10);
-  setNum(R,11,totalSupply,{ ...valueCell, alignment:{ horizontal:"right" } }); merge(R,11,R,12);
-  setCell(R,13,"KRW",valueCell); merge(R,13,R,14);
-  R++;
+  // ── TERMS & 합계
+  ws.mergeCells(R,1,R,7);
+  const termsHdr=ws.getCell(R,1);
+  termsHdr.value="TERMS & CONDITIONS";
+  termsHdr.fill=fill(DARK); termsHdr.font=font({bold:true,color:{argb:WHITE}});
+  termsHdr.alignment={vertical:"middle",horizontal:"left"}; termsHdr.border=border;
+  styleRange(ws,R,2,R,7,{fill:fill(DARK),border});
 
-  setCell(R,0,"Delivery",labelCell);
-  setCell(R,1,terms.delivery||"",valueCell); merge(R,1,R,6);
-  setCell(R,8,"VAT (10%)",valueCell); merge(R,8,R,10);
-  setNum(R,11,totalVat,{ ...valueCell, alignment:{ horizontal:"right" } }); merge(R,11,R,12);
-  setCell(R,13,"KRW",valueCell); merge(R,13,R,14);
-  R++;
+  ws.mergeCells(R,9,R,11);
+  ws.mergeCells(R,12,R,13);
+  ws.mergeCells(R,14,R,15);
+  const saLabel=ws.getCell(R,9); saLabel.value="Supply Amount"; saLabel.font=font(); saLabel.alignment={vertical:"middle"}; saLabel.border=border;
+  const saVal=ws.getCell(R,12); saVal.value=totalSupply; saVal.numFmt="#,##0"; saVal.alignment={vertical:"middle",horizontal:"right"}; saVal.border=border;
+  const saKrw=ws.getCell(R,14); saKrw.value="KRW"; saKrw.font=font(); saKrw.alignment={vertical:"middle"}; saKrw.border=border;
+  styleRange(ws,R,10,R,11,{border}); styleRange(ws,R,13,R,13,{border}); styleRange(ws,R,15,R,15,{border});
+  ws.getRow(R).height=15; R++;
 
-  setCell(R,0,"Validity",labelCell);
-  setCell(R,1,terms.validity||"",valueCell); merge(R,1,R,6);
-  setCell(R,8,"TOTAL",totalRow); merge(R,8,R,10);
-  setNum(R,11,grandTotal,totalRow); merge(R,11,R,12);
-  setCell(R,13,"KRW",totalRow); merge(R,13,R,14);
-  R++;
-
-  setCell(R,0,"Payment",labelCell);
-  setCell(R,1,terms.payment||"",valueCell); merge(R,1,R,6);
-  R++;
-
-  ws["!ref"]    = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:R, c:14} });
-  ws["!merges"] = merges;
-  ws["!cols"]   = [
-    {wch:8},{wch:18},{wch:6},{wch:6},{wch:12},{wch:6},
-    {wch:6},{wch:12},{wch:4},{wch:10},{wch:4},{wch:12},
-    {wch:4},{wch:8},{wch:4},
+  const termsRows2 = [
+    ["Delivery", terms.delivery||"", "VAT (10%)", totalVat],
+    ["Validity", terms.validity||"", "TOTAL",     grandTotal],
+    ["Payment",  terms.payment||"",  null,         null],
   ];
-  // 행 높이
-  ws["!rows"] = Array(R).fill(null).map(() => ({ hpt:16 }));
-  ws["!rows"][0] = { hpt:28 }; // QUOTATION 제목행
+  termsRows2.forEach(([tl,tv,al,av],i) => {
+    ws.mergeCells(R,2,R,7);
+    const tlC=ws.getCell(R,1); tlC.value=tl; tlC.fill=fill(LGRAY); tlC.font=font({bold:true,size:8,color:{argb:"FF555555"}}); tlC.alignment={vertical:"middle"}; tlC.border=border;
+    const tvC=ws.getCell(R,2); tvC.value=tv; tvC.font=font(); tvC.alignment={vertical:"middle"}; tvC.border=border;
+    styleRange(ws,R,2,R,7,{border});
+    if(al) {
+      ws.mergeCells(R,9,R,11);
+      ws.mergeCells(R,12,R,13);
+      ws.mergeCells(R,14,R,15);
+      const isTotal=al==="TOTAL";
+      const rowFill=isTotal?fill(ODA):{type:"pattern",pattern:"solid",fgColor:{argb:"FFFFFFFF"}};
+      const rowFont=isTotal?font({bold:true,color:{argb:WHITE},size:10}):font();
+      const alC=ws.getCell(R,9); alC.value=al; alC.fill=rowFill; alC.font=rowFont; alC.alignment={vertical:"middle"}; alC.border=border;
+      const avC=ws.getCell(R,12); avC.value=av; avC.fill=rowFill; avC.font=rowFont; avC.numFmt="#,##0"; avC.alignment={vertical:"middle",horizontal:"right"}; avC.border=border;
+      const akC=ws.getCell(R,14); akC.value="KRW"; akC.fill=rowFill; akC.font=rowFont; akC.alignment={vertical:"middle"}; akC.border=border;
+      styleRange(ws,R,10,R,11,{fill:rowFill,border});
+      styleRange(ws,R,13,R,13,{fill:rowFill,border});
+      styleRange(ws,R,15,R,15,{fill:rowFill,border});
+    }
+    ws.getRow(R).height=15; R++;
+  });
 
-  XLSX.utils.book_append_sheet(wb, ws, "Quotation");
-  XLSX.writeFile(wb, `Quotation for ${customer} ${shortNo}.xlsx`);
+  // 파일 저장
+  const buf  = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  saveAs(blob, `Quotation for ${customer} ${shortNo}.xlsx`);
 }
