@@ -6,6 +6,7 @@ import { generateDocNo, fmtNumber, calcItem, emptyItem, todayStr } from "../util
 import { exportToExcel } from "../utils/exportExcel";
 import { exportToPdf }         from "../utils/exportPdf";
 import { exportToPdfOverseas } from "../utils/exportPdfOverseas";
+import OverseasQuotationForm, { BANK_INFO_DEFAULT } from "./OverseasQuotationForm";
 import { saveQuote, getHistoryByCustomer } from "../utils/historyStore";
 import { useSharedProducts } from "../hooks/useSharedData";
 import { useAuth } from "../contexts/AuthContext";
@@ -56,6 +57,17 @@ export default function QuotationPage({ showToast }) {
   const [histLoading,   setHistLoading]   = useState(false);
   const [fixedDocNo,    setFixedDocNo]    = useState(null);
   const [itemModal,     setItemModal]     = useState(null);
+  const [overseasForm,  setOverseasForm]  = useState({
+    shipperCompany: "ODA Technologies Co., Ltd.",
+    shipperAddress: "62, Bupyeong-daero 329 Beon-gil, Bupyeong-gu, Incheon, Republic of Korea (21315)",
+    shipperFax: "82-32-715-5456",
+    payment: "T/T before shipment",
+    portLoading: "Incheon",
+    carrier: "BY AIR",
+    marks: "MADE IN Korea",
+    hsCodes: [],
+    bankInfo: BANK_INFO_DEFAULT,
+  });
 
   // 모드별 담당자 필터
   const filteredStaff = useMemo(() => {
@@ -134,6 +146,17 @@ export default function QuotationPage({ showToast }) {
   function removeItem(id) { setItems(p => p.filter(i => i.id!==id)); }
 
   function buildExportData() {
+    // 해외 폼에 담당자/공급자 자동 반영
+    const mergedOverseasForm = {
+      ...overseasForm,
+      shipperAttn:  overseasForm.shipperAttn  || staff.name  || "",
+      shipperTel:   overseasForm.shipperTel   || staff.phone || "",
+      shipperEmail: overseasForm.shipperEmail || "",
+      consigneeCompany: overseasForm.consigneeCompany || customerName,
+      consigneeAttn:    overseasForm.consigneeAttn    || contact.name  || "",
+      consigneeTel:     overseasForm.consigneeTel     || contact.phone || "",
+      consigneeEmail:   overseasForm.consigneeEmail   || contact.email || "",
+    };
     return {
       docNo, date, mode,
       staff:    { name:staff.name||"", phone:staff.phone||"" },
@@ -142,6 +165,7 @@ export default function QuotationPage({ showToast }) {
       items: calcedItems, terms,
       totalSupply, totalVat, grandTotal,
       totalUSD, exchangeRate,
+      overseasForm: mergedOverseasForm,
     };
   }
 
@@ -413,6 +437,16 @@ export default function QuotationPage({ showToast }) {
           </div>
         </div>
       </div>
+
+      {/* 해외 전용 추가 정보 */}
+      {isOverseas && (
+        <OverseasQuotationForm
+          form={overseasForm}
+          onChange={setOverseasForm}
+          staffInfo={staff}
+          supplierInfo={supplier}
+        />
+      )}
 
       {/* 품목 팝업 */}
       {itemModal && (

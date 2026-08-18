@@ -1,17 +1,56 @@
 import { fmtNumber } from "./helpers";
-import logoSrc from "../assets/logo.png";
+import logoSrc      from "../assets/logo.png";
+import signatureSrc from "../assets/signature.png";
 
 export function exportToPdfOverseas(data) {
-  const { docNo, staff, supplier, customer, contact, items, terms, totalUSD, exchangeRate } = data;
-  const shortNo  = docNo.replace("ODA-", "");
-  const fileName = `Quotation for ${customer} ${shortNo}`;
-  const ODA  = "#F84F04";
-  const DARK = "#1a1a1a";
+  const {
+    docNo, items, totalUSD,
+    // 해외 전용 필드
+    overseasForm = {},
+  } = data;
 
-  const fmtUSD = (n) => {
-    if (!n && n !== 0) return "-";
-    return "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
-  };
+  const {
+    shipperCompany  = "ODA Technologies Co., Ltd.",
+    shipperAddress  = "62, Bupyeong-daero 329 Beon-gil, Bupyeong-gu, Incheon, Republic of Korea (21315)",
+    shipperAttn     = "",
+    shipperTel      = "",
+    shipperFax      = "82-32-715-5456",
+    shipperEmail    = "",
+    consigneeCompany= "",
+    consigneeAddress= "",
+    consigneeAttn   = "",
+    consigneeTel    = "",
+    consigneeEmail  = "",
+    invoiceNo       = docNo,
+    payment         = "T/T before shipment",
+    lcBank          = "",
+    buyer           = "",
+    portLoading     = "Incheon",
+    finalDest       = "",
+    carrier         = "BY AIR",
+    sailingDate     = "",
+    remarks         = "",
+    marks           = "MADE IN Korea",
+    hsCodes         = [],
+    priceTerm       = "",
+    leadTime        = "",
+    validUntil      = "",
+    bankInfo        = `Industrial Bank of Korea/Gal San-Yeok Branch\nAccount no. : 483-022203-56-00012\nSwift Code : IBKOKRSE\nBenef'y name : ODA Technologies`,
+  } = overseasForm;
+
+  const fileName = `Quotation_${docNo.replace(/[^a-zA-Z0-9]/g,"_")}`;
+
+  const fmtUSD = (n) => n != null
+    ? "$" + Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})
+    : "-";
+
+  const validDateStr = validUntil
+    ? new Date(validUntil).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})
+    : "";
+
+  const dateStr = new Date().toLocaleDateString("en-US",{day:"numeric",month:"short",year:"numeric"})
+    .replace(",","").split(" ");
+  const invoiceDateStr = `${dateStr[0]}th ${dateStr[1]}, ${dateStr[2]}`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -23,154 +62,229 @@ export function exportToPdfOverseas(data) {
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:210mm;}
 body{
-  font-family:'Noto Sans KR','Arial',sans-serif;
-  font-size:9px;color:#111;background:#fff;
-  padding:32px 34px;
+  font-family:'Arial','Noto Sans KR',sans-serif;
+  font-size:8.5px;color:#111;background:#fff;
+  padding:10mm 12mm;
   display:flex;flex-direction:column;
 }
 @page{size:A4 portrait;margin:0;}
 @media print{
   html,body{width:210mm;}
-  body{padding:32px 34px;}
+  body{padding:10mm 12mm;}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
 }
-.top-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;flex-shrink:0;}
-.logo-wrap img{height:36px;object-fit:contain;display:block;}
-.title-block{text-align:right;}
-.quotation-title{font-size:22px;font-weight:800;letter-spacing:7px;color:#111;display:block;line-height:1;}
-.subtitle{font-size:6.5px;letter-spacing:2.5px;color:#aaa;margin-top:3px;display:block;text-transform:uppercase;}
-.orange-bar{height:2.5px;background:${ODA};margin-bottom:12px;flex-shrink:0;}
-.info-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;flex-shrink:0;}
-.info-box{border:1px solid #ccc;}
-.info-title{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.1em;display:block;width:100%;}
-.info-row{display:flex;border-top:1px solid #e0e0e0;}
-.info-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:62px;width:62px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
-.info-value{padding:3.5px 6px;font-size:7.5px;color:#111;display:flex;align-items:center;flex:1;}
-.item-table{width:100%;border-collapse:collapse;font-size:8px;flex-shrink:0;}
-.item-table thead tr{background:${ODA};}
-.item-table th{color:#fff;padding:5.5px 4px;text-align:center;font-size:7px;font-weight:700;border-right:1px solid rgba(255,255,255,.3);white-space:nowrap;}
-.item-table th:last-child{border-right:none;}
-.item-table td{padding:6px 5px;border-bottom:1px solid #ebebeb;border-right:1px solid #f2f2f2;vertical-align:middle;}
-.item-table td:last-child{border-right:none;}
-.item-table tr:nth-child(even) td{background:#fafafa;}
-.detail-row td{background:#f4f6fb!important;color:#666;font-size:7px;padding:2.5px 5px 2.5px 14px;border-bottom:1px solid #efefef;font-style:italic;}
-td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
-.spacer{flex:1;min-height:60px;max-height:120px;}
-.bottom-wrap{flex-shrink:0;width:100%;}
-.bottom-wrap table{width:100%;border-collapse:separate;border-spacing:8px 0;table-layout:fixed;}
-.bottom-wrap table td{width:50%;vertical-align:top;padding:0;}
-.terms-table{width:100%;border-collapse:collapse;border:1px solid #ccc;}
-.terms-table .terms-hdr{background:${DARK};color:#fff;font-size:7px;font-weight:700;padding:3.5px 7px;letter-spacing:.08em;}
-.terms-table .terms-row td{border-top:1px solid #e0e0e0;padding:3.5px 6px;font-size:7.5px;}
-.terms-table .terms-row td:first-child{background:#f4f4f4;font-weight:700;font-size:7px;color:#555;width:54px;border-right:1px solid #e0e0e0;}
-.amt-table{width:100%;border-collapse:collapse;border:1px solid #ccc;}
-.amt-table tr td{padding:5px 9px;font-size:8px;border-bottom:1px solid #e0e0e0;}
-.amt-table tr:last-child td{border-bottom:none;}
-.amt-table .total-row td{background:${ODA};color:#fff;font-weight:800;font-size:10.5px;padding:7px 9px;border-bottom:none;}
-/* 환율 안내 */
-.exrate-chip{display:inline-block;background:#EEF3FF;color:#2563EB;font-size:6.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:10px;}
-.footer{margin-top:10px;text-align:center;color:#bbb;font-size:6.5px;border-top:1px solid #eee;padding-top:6px;flex-shrink:0;}
+
+/* 타이틀 */
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.top .title{font-size:20px;font-weight:700;letter-spacing:2px;color:#111;text-align:center;flex:1;}
+.top .logo{height:38px;object-fit:contain;}
+
+/* 메인 테이블 */
+.main-tbl{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:6px;}
+.main-tbl td,.main-tbl th{border:1px solid #999;padding:3.5px 5px;vertical-align:top;}
+.main-tbl .hdr{font-weight:700;font-size:7.5px;text-decoration:underline;}
+.main-tbl .val{font-size:8px;}
+
+/* 품목 테이블 */
+.item-tbl{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:6px;}
+.item-tbl td,.item-tbl th{border:1px solid #999;padding:4px 5px;vertical-align:middle;}
+.item-tbl th{font-weight:700;font-size:8px;text-align:center;}
+.item-tbl td.c{text-align:center;}
+.item-tbl td.r{text-align:right;}
+.item-tbl td.b{font-weight:700;}
+
+/* TOTAL */
+.total-row{display:flex;justify-content:space-between;border-top:2px solid #333;border-bottom:1px solid #999;padding:5px 5px;font-weight:700;font-size:9px;margin-bottom:8px;}
+
+/* Conditions */
+.cond{font-size:8px;line-height:1.6;margin-bottom:8px;}
+.cond .lead{color:#B45309;font-weight:700;background:#FEF9C3;padding:0 2px;}
+
+/* 서명 영역 */
+.sign-area{display:flex;justify-content:flex-end;align-items:flex-end;gap:20px;margin-top:4px;}
+.sign-left{font-size:8.5px;font-weight:700;}
+.sign-right{text-align:right;}
+.sign-right img.sig{height:48px;object-fit:contain;}
+.sign-right .company-name{font-size:11px;font-weight:700;font-style:italic;color:#1a3a6e;}
+.sign-right .president{font-size:9px;font-weight:700;font-style:italic;color:#1a3a6e;}
 </style>
 </head>
 <body>
-<div class="top-header">
-  <div class="logo-wrap"><img src="${logoSrc}" alt="ODA Technologies"/></div>
-  <div class="title-block">
-    <span class="quotation-title">QUOTATION</span>
-    <span class="subtitle">Partner Ship, Core Power of ODA</span>
-  </div>
-</div>
-<div class="orange-bar"></div>
 
-
-
-<div class="info-wrap">
-  <div class="info-box">
-    <div class="info-title">CUSTOMER</div>
-    <div class="info-row"><div class="info-label">Company</div><div class="info-value" style="font-weight:700">${customer||''}</div></div>
-    <div class="info-row"><div class="info-label">Contact</div><div class="info-value">${contact.name||''}</div></div>
-    <div class="info-row"><div class="info-label">Tel.</div><div class="info-value">${contact.phone||''}</div></div>
-    <div class="info-row"><div class="info-label">E-mail</div><div class="info-value">${contact.email||''}</div></div>
-  </div>
-  <div class="info-box">
-    <div class="info-title">ODA TECHNOLOGIES</div>
-    <div class="info-row"><div class="info-label">Doc. No.</div><div class="info-value" style="font-weight:700">${docNo}</div></div>
-    <div class="info-row"><div class="info-label">Supplier</div><div class="info-value">${supplier.name}</div></div>
-    <div class="info-row"><div class="info-label">Reg. No.</div><div class="info-value">${supplier.bizNo}</div></div>
-    <div class="info-row"><div class="info-label">Sales Rep.</div><div class="info-value">${staff.name||''}</div></div>
-    <div class="info-row"><div class="info-label">Tel.</div><div class="info-value">${staff.phone||''}</div></div>
-  </div>
+<!-- 타이틀 -->
+<div class="top">
+  <div class="title">QUOTATION</div>
+  <img src="${logoSrc}" class="logo" alt="ODA"/>
 </div>
 
-<table class="item-table">
+<!-- 메인 정보 테이블 -->
+<table class="main-tbl">
+  <tr>
+    <!-- 좌: Shipper -->
+    <td rowspan="5" style="width:48%;vertical-align:top;">
+      <div class="hdr">Shipper/Exporter</div>
+      <div class="val" style="font-weight:700;margin-top:2px;">${shipperCompany}</div>
+      <div class="val">${shipperAddress}</div>
+      <br/>
+      ${shipperAttn ? `<div class="val"><b>Attn : ${shipperAttn}</b></div>` : ""}
+      ${shipperTel  ? `<div class="val">Tel : ${shipperTel}</div>` : ""}
+      ${shipperFax  ? `<div class="val">Fax : ${shipperFax}</div>` : ""}
+      ${shipperEmail? `<div class="val">E-mail : ${shipperEmail}</div>` : ""}
+      <br/>
+      <div class="hdr">Consignee</div>
+      <div class="val" style="font-weight:700;margin-top:2px;">${consigneeCompany}</div>
+      ${consigneeAddress ? `<div class="val">${consigneeAddress}</div>` : ""}
+      <br/>
+      ${consigneeAttn  ? `<div class="val"><b>Attn: ${consigneeAttn}</b></div>` : ""}
+      ${consigneeTel   ? `<div class="val">Tel: ${consigneeTel}</div>` : ""}
+      ${consigneeEmail ? `<div class="val">E: ${consigneeEmail}</div>` : ""}
+    </td>
+    <!-- 우상: Invoice No & Date -->
+    <td colspan="2">
+      <span class="hdr">No.&amp; Date of Invoice</span><br/>
+      <span class="val">${invoiceNo},</span>
+      <span class="val" style="float:right">${invoiceDateStr}</span>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <div class="hdr">Payment</div>
+      <div class="val" style="text-align:center;font-weight:700;margin-top:2px;">${payment}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <div class="hdr">L/C issuing bank</div>
+      <div class="val" style="min-height:16px;">${lcBank}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <div class="hdr">Buyer (if other than consignee)</div>
+      <div class="val" style="min-height:16px;">${buyer}</div>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2">
+      <div class="hdr">Remarks</div>
+      <div class="val" style="min-height:24px;">${remarks}</div>
+    </td>
+  </tr>
+  <!-- Port / Destination / Carrier -->
+  <tr>
+    <td style="width:48%">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="border-right:1px solid #999;padding-right:6px;width:50%">
+            <div class="hdr">Port of loading</div>
+            <div class="val">${portLoading}</div>
+          </td>
+          <td style="padding-left:6px;">
+            <div class="hdr">Final destination</div>
+            <div class="val">${finalDest}</div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding-top:4px;">
+            <div class="hdr">Carrier</div>
+            <div class="val">${carrier}</div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" style="padding-top:4px;">
+            <div class="hdr">Sailing on or about</div>
+            <div class="val">${sailingDate}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+    <td colspan="2" style="vertical-align:top;">
+      <!-- 빈 공간 (우측 하단) -->
+    </td>
+  </tr>
+</table>
+
+<!-- 품목 테이블 -->
+<table class="item-tbl">
   <thead>
     <tr>
-      <th style="width:20px">NO</th>
-      <th style="width:22%">Description</th>
-      <th style="width:14%">Model</th>
-      <th style="width:28px">Qty</th>
-      <th style="width:14%">Unit Price (USD)</th>
-      <th style="width:14%">Amount (USD)</th>
-      <th style="text-align:left">Remark</th>
+      <th style="width:28%">Marks/No.of PKGS.</th>
+      <th style="width:35%">Description</th>
+      <th style="width:13%">Quantity</th>
+      <th style="width:12%">Unit Price(USD)</th>
+      <th style="width:12%">Total Price(USD)</th>
     </tr>
   </thead>
   <tbody>
-    ${items.map((item,idx)=>`
     <tr>
-      <td class="c">${idx+1}</td>
-      <td class="b">${item.category||''}</td>
-      <td>${item.spec||''}</td>
-      <td class="c">${item.qty}</td>
-      <td class="r">${fmtUSD(item.unitPriceUSD)}</td>
-      <td class="r b">${fmtUSD(item.amountUSD)}</td>
-      <td>${item.note||''}</td>
+      <td style="vertical-align:top;line-height:1.8;">
+        <div class="val"><b>${marks}</b></div>
+        ${hsCodes.length > 0 ? `<div class="val" style="margin-top:4px;"><b>HS CODE :</b></div>${hsCodes.map(c=>`<div class="val">${c}</div>`).join("")}` : ""}
+      </td>
+      <td style="vertical-align:top;">
+        ${items.map((item,idx) => `
+          <div style="font-weight:700;margin-bottom:2px;">${item.category||""}</div>
+          <div style="margin-bottom:${idx<items.length-1?'10px':'0'}">${item.spec||""}</div>
+          ${(item.details||[]).map(d=>`<div style="font-size:7.5px;color:#555;">- ${d}</div>`).join("")}
+        `).join('<div style="height:8px;"></div>')}
+      </td>
+      <td style="vertical-align:top;">
+        ${items.map(item => `
+          <div style="text-align:center;margin-bottom:12px;">${item.qty} PCS</div>
+        `).join("")}
+      </td>
+      <td style="vertical-align:top;">
+        ${items.map(item => `
+          <div style="text-align:right;margin-bottom:12px;">${fmtUSD(item.unitPriceUSD||item.unitPrice)}</div>
+        `).join("")}
+      </td>
+      <td style="vertical-align:top;">
+        ${items.map(item => `
+          <div style="text-align:right;font-weight:700;margin-bottom:12px;">${fmtUSD(item.amountUSD||item.amount)}</div>
+        `).join("")}
+      </td>
     </tr>
-    ${(item.details||[]).map(d=>`<tr class="detail-row"><td></td><td colspan="6">- ${d}</td></tr>`).join('')}
-    `).join('')}
   </tbody>
 </table>
 
-<div class="spacer"></div>
-
-<div class="bottom-wrap">
-  <table>
-    <tr>
-      <td>
-        <table class="terms-table">
-          <tr><td colspan="2" class="terms-hdr">TERMS &amp; CONDITIONS</td></tr>
-          <tr class="terms-row"><td>Delivery</td><td>${terms.delivery||''}</td></tr>
-          <tr class="terms-row"><td>Validity</td><td>${terms.validity||''}</td></tr>
-          <tr class="terms-row"><td>Payment</td><td>${terms.payment||''}</td></tr>
-        </table>
-      </td>
-      <td>
-        <table class="amt-table">
-          <tr class="total-row">
-            <td class="amt-label">TOTAL (USD)</td>
-            <td style="text-align:right;font-weight:800">${fmtUSD(totalUSD)}</td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
+<!-- TOTAL -->
+<div class="total-row">
+  <span>TOTAL Amount (USD)/${priceTerm ? priceTerm.split(" ")[0] : "DAP"}</span>
+  <span>${fmtUSD(totalUSD)}</span>
 </div>
 
-<div class="footer">
-  We hereby submit our quotation as above. &nbsp;|&nbsp;
-  Date: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} &nbsp;|&nbsp;
-  ODA Technologies Co., Ltd.
+<!-- Conditions -->
+<div class="cond">
+  <div><b>Conditions;</b></div>
+  ${priceTerm ? `<div>1. Price term: ${priceTerm}</div>` : ""}
+  ${leadTime  ? `<div>2. Lead time: <span class="lead">${leadTime}</span></div>` : ""}
+  ${validDateStr ? `<div>3. This quotation is valid untill ${validDateStr} .</div>` : ""}
+  <div>4. Bank information</div>
+  ${bankInfo.split("\n").map(l=>`<div style="margin-left:12px;">${l}</div>`).join("")}
 </div>
+
+<!-- 서명 -->
+<div class="sign-area">
+  <div class="sign-left">Signed by</div>
+  <div class="sign-right">
+    <div class="company-name">ODA Technologies CO.,LTD</div>
+    <img src="${signatureSrc}" class="sig" alt="signature"/>
+    <div class="president"><i>ODA Technologies Co.,Ltd.</i></div>
+    <div class="president">President / Kim Jung Suk</div>
+  </div>
+</div>
+
 <script>
 document.fonts.ready.then(function(){
   setTimeout(function(){
     window.print();
     window.onafterprint = function(){ window.close(); };
-  }, 400);
+  }, 500);
 });
 <\/script>
 </body></html>`;
 
-  const w = window.open('','_blank','width=900,height=760');
+  const w = window.open("","_blank","width=900,height=760");
   w.document.write(html);
   w.document.close();
 }
