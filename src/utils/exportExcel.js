@@ -9,99 +9,149 @@ export function exportToExcel(data) {
     totalSupply, totalVat, grandTotal,
   } = data;
 
-  const shortNo = docNo.replace("ODA-", "");
+  const shortNo  = docNo.replace("ODA-", "");
+  const fileName = `Quotation for ${customer} ${shortNo}.xlsx`;
+
   const wb = XLSX.utils.book_new();
-  const ws_data = [];
+  const ws = {};
+  const merges = [];
 
-  // 빈 행 1~5
-  for (let i = 0; i < 5; i++) ws_data.push(Array(20).fill(""));
+  // ── 헬퍼
+  function c(r, col, v, style) {
+    const addr = XLSX.utils.encode_cell({ r, c: col });
+    ws[addr] = { v, t: typeof v === "number" ? "n" : "s", s: style };
+  }
+  function numFmt(r, col, v) {
+    const addr = XLSX.utils.encode_cell({ r, c: col });
+    ws[addr] = { v, t: "n", z: "#,##0" };
+  }
+  function merge(rs, cs, re, ce) { merges.push({ s:{r:rs,c:cs}, e:{r:re,c:ce} }); }
 
-  // Row 6: 섹션 타이틀
-  const r6 = Array(20).fill("");
-  r6[0] = "CUSTOMER"; r6[8] = "ODA TECHNOLOGIES";
-  ws_data.push(r6);
+  // ── 행 인덱스
+  let R = 0;
 
-  // Row 7
-  const r7 = Array(20).fill("");
-  r7[0]="Bill To";      r7[2]=customer;
-  r7[8]="Doc. No.";     r7[11]=docNo;
-  ws_data.push(r7);
+  // Row 0~3: 빈 행 (상단 여백)
+  R = 4;
 
-  // Row 8
-  const r8 = Array(20).fill("");
-  r8[0]="Attention";    r8[2]=contact.name;
-  r8[8]="Supplier";     r8[11]=supplier.name;
-  ws_data.push(r8);
+  // Row 4: CUSTOMER / ODA TECHNOLOGIES 타이틀
+  c(R, 0, "CUSTOMER");
+  c(R, 8, "ODA TECHNOLOGIES");
+  merge(R,0,R,5); merge(R,8,R,13);
+  R++;
 
-  // Row 9
-  const r9 = Array(20).fill("");
-  r9[0]="Phone";        r9[2]=contact.phone;
-  r9[8]="Reg. No.";     r9[11]=supplier.bizNo;
-  ws_data.push(r9);
-
-  // Row 10
-  const r10 = Array(20).fill("");
-  r10[0]="E-mail";      r10[2]=contact.email;
-  r10[8]="Sales Rep.";  r10[11]=staff.name;
-  ws_data.push(r10);
-
-  // Row 11
-  const r11 = Array(20).fill("");
-  r11[8]="Phone";       r11[11]=staff.phone;
-  ws_data.push(r11);
-
-  ws_data.push(Array(20).fill(""));
-
-  // 품목 헤더
-  const hdr = Array(20).fill("");
-  hdr[0]="NO"; hdr[1]="Description"; hdr[4]="Model";
-  hdr[7]="Qty"; hdr[8]="Unit Price"; hdr[11]="Amount";
-  hdr[13]="VAT"; hdr[15]="Remark";
-  ws_data.push(hdr);
-
-  // 품목 행
-  items.forEach((item, idx) => {
-    const main = Array(20).fill("");
-    main[0]=idx+1; main[1]=item.category; main[4]=item.spec;
-    main[7]=item.qty; main[8]=fmtNumber(item.unitPrice);
-    main[11]=fmtNumber(item.amount); main[13]=fmtNumber(item.vat);
-    main[15]=item.note;
-    ws_data.push(main);
-    (item.details||[]).forEach(d => {
-      const dr = Array(20).fill(""); dr[1]="- "+d; ws_data.push(dr);
-    });
-    ws_data.push(Array(20).fill(""));
+  // Row 5~8: 고객/공급자 정보 (2컬럼)
+  const infoRows = [
+    ["Bill To",    customer||"",      "Doc. No.",   docNo],
+    ["Attention",  contact.name||"",  "Supplier",   supplier.name],
+    ["Phone",      contact.phone||"", "Reg. No.",   supplier.bizNo],
+    ["E-mail",     contact.email||"", "Sales Rep.", staff.name||""],
+    ["",           "",                "Phone",      staff.phone||""],
+  ];
+  infoRows.forEach(([ll, lv, rl, rv]) => {
+    c(R, 0, ll); c(R, 2, lv);
+    merge(R,2,R,6);
+    c(R, 8, rl); c(R, 11, rv);
+    merge(R,11,R,15);
+    R++;
   });
 
-  ws_data.push(Array(20).fill(""));
+  R++; // 빈 행
 
-  // TERMS & 합계
-  const tc0 = Array(20).fill("");
-  tc0[0]="TERMS & CONDITIONS";
-  tc0[8]="Supply Amount"; tc0[11]=fmtNumber(totalSupply); tc0[15]="KRW";
-  ws_data.push(tc0);
+  // ── 품목 헤더
+  const hdrs = ["NO","Description","","","Model","","Qty","Unit Price","","Amount","","VAT","","Remark",""];
+  const hdrCols = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14];
+  hdrs.forEach((h,i) => c(R, hdrCols[i], h));
+  merge(R,1,R,3); // Description
+  merge(R,4,R,5); // Model
+  merge(R,7,R,8); // Unit Price
+  merge(R,9,R,10); // Amount
+  merge(R,11,R,12); // VAT
+  merge(R,13,R,14); // Remark
+  const hdrRow = R;
+  R++;
 
-  const tc1 = Array(20).fill("");
-  tc1[0]="Delivery"; tc1[2]=terms.delivery;
-  tc1[8]="VAT (10%)"; tc1[11]=fmtNumber(totalVat); tc1[15]="KRW";
-  ws_data.push(tc1);
+  // ── 품목 행
+  items.forEach((item, idx) => {
+    c(R, 0, idx + 1);
+    c(R, 1, item.category || "");
+    merge(R,1,R,3);
+    c(R, 4, item.spec || "");
+    merge(R,4,R,5);
+    numFmt(R, 6, Number(item.qty) || 0);
+    numFmt(R, 7, Number(item.unitPrice) || 0);
+    merge(R,7,R,8);
+    numFmt(R, 9, Number(item.amount) || 0);
+    merge(R,9,R,10);
+    numFmt(R, 11, Number(item.vat) || 0);
+    merge(R,11,R,12);
+    c(R, 13, item.note || "");
+    merge(R,13,R,14);
+    R++;
 
-  const tc2 = Array(20).fill("");
-  tc2[0]="Validity"; tc2[2]=terms.validity;
-  tc2[8]="TOTAL"; tc2[11]=fmtNumber(grandTotal); tc2[15]="KRW";
-  ws_data.push(tc2);
+    // 상세 사양
+    (item.details || []).forEach(d => {
+      c(R, 1, `- ${d}`);
+      merge(R,1,R,14);
+      R++;
+    });
 
-  const tc3 = Array(20).fill("");
-  tc3[0]="Payment"; tc3[2]=terms.payment;
-  ws_data.push(tc3);
+    R++; // 품목 간 빈 행
+  });
 
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  R++; // 빈 행
+
+  // ── TERMS & CONDITIONS + 합계
+  c(R, 0, "TERMS & CONDITIONS");
+  merge(R,0,R,5);
+  c(R, 8, "Supply Amount");
+  numFmt(R, 11, totalSupply);
+  merge(R,11,R,12);
+  c(R, 13, "KRW");
+  R++;
+
+  c(R, 0, "Delivery"); c(R, 2, terms.delivery || "");
+  merge(R,2,R,5);
+  c(R, 8, "VAT (10%)");
+  numFmt(R, 11, totalVat);
+  merge(R,11,R,12);
+  c(R, 13, "KRW");
+  R++;
+
+  c(R, 0, "Validity"); c(R, 2, terms.validity || "");
+  merge(R,2,R,5);
+  c(R, 8, "TOTAL");
+  numFmt(R, 11, grandTotal);
+  merge(R,11,R,12);
+  c(R, 13, "KRW");
+  R++;
+
+  c(R, 0, "Payment"); c(R, 2, terms.payment || "");
+  merge(R,2,R,5);
+
+  // ── 범위 설정
+  ws["!ref"] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:R, c:14} });
+  ws["!merges"] = merges;
   ws["!cols"] = [
-    {wch:12},{wch:26},{wch:18},{wch:6},{wch:18},{wch:6},{wch:6},
-    {wch:7},{wch:14},{wch:6},{wch:6},{wch:16},{wch:6},{wch:12},
-    {wch:6},{wch:8},{wch:6},{wch:6},{wch:6},{wch:6},
+    {wch:6},   // A: NO
+    {wch:22},  // B: Description
+    {wch:10},  // C
+    {wch:8},   // D
+    {wch:14},  // E: Model
+    {wch:6},   // F
+    {wch:6},   // G: Qty
+    {wch:14},  // H: Unit Price
+    {wch:6},   // I
+    {wch:14},  // J: Amount
+    {wch:6},   // K
+    {wch:12},  // L: VAT
+    {wch:4},   // M
+    {wch:10},  // N: Remark
+    {wch:4},   // O
   ];
+  ws["!rows"] = [];
+  // 헤더 행 높이
+  ws["!rows"][hdrRow] = { hpt: 18 };
 
   XLSX.utils.book_append_sheet(wb, ws, "Quotation");
-  XLSX.writeFile(wb, `Quotation for ${customer} ${shortNo}.xlsx`);
+  XLSX.writeFile(wb, fileName);
 }

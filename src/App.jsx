@@ -1,18 +1,20 @@
 import { useState, useCallback } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import LoginPage      from "./components/LoginPage";
-import QuotationPage  from "./components/QuotationPage";
-import StaffManager   from "./components/StaffManager";
+import LoginPage       from "./components/LoginPage";
+import QuotationPage   from "./components/QuotationPage";
+import StaffManager    from "./components/StaffManager";
 import CustomerManager from "./components/CustomerManager";
 import ProductManager  from "./components/ProductManager";
 import AdminPage       from "./components/AdminPage";
+import QuoteDashboard  from "./components/QuoteDashboard";
 import Toast from "./components/Toast";
 
 const PAGES = [
-  { id:"quote",    label:"견적서 작성", icon:"📄" },
-  { id:"staff",    label:"담당자 관리", icon:"👤" },
-  { id:"customer", label:"거래처 관리", icon:"🏢" },
-  { id:"product",  label:"품목 관리",   icon:"📦" },
+  { id:"quote",     label:"견적서 작성",  icon:"📄" },
+  { id:"dashboard", label:"견적 현황",    icon:"📊" },
+  { id:"staff",     label:"담당자 관리",  icon:"👤" },
+  { id:"customer",  label:"거래처 관리",  icon:"🏢" },
+  { id:"product",   label:"품목 관리",    icon:"📦" },
 ];
 
 function AppInner() {
@@ -35,44 +37,31 @@ function AppInner() {
   return (
     <>
       <header style={{
-        background:"#111111",
-        color:"#fff",
-        padding:"0 24px",
-        height:56,
-        display:"flex",
-        alignItems:"center",
-        justifyContent:"space-between",
+        background:"#111111", color:"#fff",
+        padding:"0 24px", height:56,
+        display:"flex", alignItems:"center", justifyContent:"space-between",
         boxShadow:"0 2px 8px rgba(0,0,0,.4)",
         position:"sticky", top:0, zIndex:100,
       }}>
-        {/* 타이틀: ODA와 QUOTATION 동일 폰트 크기 */}
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ fontSize:17, fontWeight:700, letterSpacing:"-.2px", color:"#fff" }}>ODA</span>
+          <span style={{ fontSize:17, fontWeight:700, color:"#fff" }}>ODA</span>
           <span style={{ color:"#F84F04", fontSize:17, fontWeight:400 }}>—</span>
-          <span style={{ fontSize:17, fontWeight:700, letterSpacing:"-.2px", color:"#fff" }}>QUOTATION</span>
+          <span style={{ fontSize:17, fontWeight:700, color:"#fff" }}>QUOTATION</span>
         </div>
-
-        {/* 우측: 사용자 + 로그아웃 */}
         <div style={{ display:"flex", alignItems:"center", gap:14 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <div style={{
-              width:30, height:30, borderRadius:"50%",
-              background:"#F84F04",
+              width:30, height:30, borderRadius:"50%", background:"#F84F04",
               display:"flex", alignItems:"center", justifyContent:"center",
               fontSize:13, fontWeight:700, color:"#fff",
-            }}>
-              {(displayName||"?").charAt(0)}
-            </div>
+            }}>{(displayName||"?").charAt(0)}</div>
             <div style={{ lineHeight:1.3 }}>
               <div style={{ fontSize:13, fontWeight:600, color:"#fff" }}>{displayName}</div>
-              <div style={{ fontSize:10, color:"rgba(255,255,255,.5)" }}>
-                {isAdmin ? "👑 관리자" : "사용자"}
-              </div>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,.5)" }}>{isAdmin?"👑 관리자":"사용자"}</div>
             </div>
           </div>
           <button onClick={logout} style={{
-            background:"rgba(255,255,255,.1)",
-            border:"1px solid rgba(255,255,255,.2)",
+            background:"rgba(255,255,255,.1)", border:"1px solid rgba(255,255,255,.2)",
             color:"#fff", padding:"5px 12px", borderRadius:6,
             fontSize:12, cursor:"pointer", fontFamily:"inherit",
           }}>로그아웃</button>
@@ -83,18 +72,17 @@ function AppInner() {
         <aside className="sidebar">
           <div className="sidebar-title">메뉴</div>
           {allPages.map(p=>(
-            <button key={p.id}
-              className={`sidebar-btn${page===p.id?" active":""}`}
-              onClick={()=>setPage(p.id)}>
+            <button key={p.id} className={`sidebar-btn${page===p.id?" active":""}`} onClick={()=>setPage(p.id)}>
               <span className="icon">{p.icon}</span>{p.label}
             </button>
           ))}
         </aside>
         <main className="content">
-          {page==="quote"    && <QuotationPage  showToast={showToast}/>}
-          {page==="staff"    && <StaffManager   showToast={showToast}/>}
-          {page==="customer" && <CustomerManager showToast={showToast}/>}
-          {page==="product"  && <ProductManager  showToast={showToast}/>}
+          {page==="quote"     && <QuotationPage  showToast={showToast}/>}
+          {page==="dashboard" && <QuoteDashboard showToast={showToast}/>}
+          {page==="staff"     && <StaffManager   showToast={showToast}/>}
+          {page==="customer"  && <CustomerManager showToast={showToast}/>}
+          {page==="product"   && <ProductManager  showToast={showToast}/>}
           {page==="admin" && isAdmin && <AdminPage showToast={showToast}/>}
         </main>
       </div>
@@ -104,9 +92,5 @@ function AppInner() {
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <AppInner />
-    </AuthProvider>
-  );
+  return <AuthProvider><AppInner/></AuthProvider>;
 }

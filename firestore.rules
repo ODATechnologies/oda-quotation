@@ -1,15 +1,30 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // users 컬렉션: 본인 읽기 가능, 관리자 전체 읽기/쓰기 가능
+
+    // 사용자 계정 관리
     match /users/{uid} {
       allow read: if request.auth.uid == uid
-        || (request.auth != null &&
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow write: if request.auth != null &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      // 본인 계정 생성(가입신청)은 허용
+        || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       allow create: if request.auth.uid == uid;
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // 공용 품목: 로그인 사용자 읽기, 관리자만 쓰기
+    match /shared_products/{docId} {
+      allow read: if request.auth != null;
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // 개인 품목: 본인만 읽기/쓰기
+    match /my_products/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.uid;
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+    }
+
+    // 견적 이력: 로그인 사용자 읽기/쓰기
+    match /quote_history/{docId} {
+      allow read, write: if request.auth != null;
     }
   }
 }
