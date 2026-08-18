@@ -7,10 +7,6 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
   const [showDrop,    setShowDrop]    = useState(false);
   const dropRef = useRef(null);
 
-<<<<<<< HEAD
-=======
-  // 외부 클릭 시 드롭다운 닫기
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
   useEffect(() => {
     function handleClick(e) {
       if (dropRef.current && !dropRef.current.contains(e.target)) setShowDrop(false);
@@ -19,11 +15,7 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-<<<<<<< HEAD
   // 전체 규격 flat
-=======
-  // 전체 규격 목록 (공용 + 개인) flat
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
   const allSpecs = useMemo(() => {
     const result = [];
     (productList || []).forEach(cat => {
@@ -42,10 +34,6 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
     return result;
   }, [productList]);
 
-<<<<<<< HEAD
-=======
-  // 검색 필터
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
   const filteredSpecs = useMemo(() => {
     const q = specSearch.toLowerCase();
     if (!q) return allSpecs;
@@ -58,7 +46,6 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
 
   function handleSpecSelect(s) {
     onUpdate({
-<<<<<<< HEAD
       category:    s.catName,
       spec:        s.spec,
       specId:      s.specId,
@@ -67,16 +54,6 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
       manualPrice: false,
       unitPrice:   s.listPrice,
       details:     s.details,
-=======
-      category:   s.catName,
-      spec:       s.spec,
-      specId:     s.specId,
-      listPrice:  s.listPrice,
-      dc:         "",
-      manualPrice:false,
-      unitPrice:  s.listPrice,
-      details:    s.details,
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
     });
     setSpecSearch(s.spec);
     setShowDrop(false);
@@ -84,21 +61,16 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
 
   function handleUnitPriceChange(e) {
     const v = e.target.value.replace(/,/g, "");
-    onUpdate({ unitPrice:v, manualPrice:true, dc:"" });
+    onUpdate({ unitPrice: v, manualPrice: true, dc: "" });
   }
 
-<<<<<<< HEAD
   const dcApplied        = !item.manualPrice && item.dc !== "" && item.dc !== null;
-=======
-  const dcApplied      = !item.manualPrice && item.dc !== "" && item.dc !== null;
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
   const displayUnitPrice = calc?.unitPrice || 0;
   const displayLabel     = item.spec ? `${item.spec}` : "";
 
   return (
     <>
       <tr>
-<<<<<<< HEAD
         {/* NO */}
         <td style={{ textAlign:"center", fontWeight:700, color:"var(--text-muted)", width:36 }}>{idx+1}</td>
 
@@ -265,86 +237,6 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
           {dcApplied && <div style={{ fontSize:10, color:"var(--success)", fontWeight:700 }}>×{((100-Number(item.dc))/100).toFixed(2)}</div>}
         </td>
 
-=======
-        <td style={{ textAlign:"center", fontWeight:700, color:"var(--text-muted)" }}>{idx+1}</td>
-
-        {/* 규격 통합 검색 */}
-        <td colSpan={2} style={{ position:"relative", minWidth:280 }} ref={dropRef}>
-          <div style={{ display:"flex", gap:4, alignItems:"center" }}>
-            <input
-              value={specSearch || item.spec || ""}
-              onChange={e => { setSpecSearch(e.target.value); setShowDrop(true); }}
-              onFocus={() => setShowDrop(true)}
-              placeholder="🔍 규격명 / 카테고리 검색..."
-              style={{ flex:1, padding:"5px 8px", border:"1px solid var(--border)", borderRadius:4, fontSize:12 }}
-            />
-            {(item.spec || specSearch) && (
-              <button onClick={() => { onUpdate({ category:"", spec:"", specId:"", listPrice:"", dc:"", manualPrice:false, unitPrice:"", details:[] }); setSpecSearch(""); }}
-                style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-muted)", fontSize:14, padding:"0 4px" }}>✕</button>
-            )}
-          </div>
-          {item.category && <div style={{ fontSize:10, color:"var(--text-muted)", marginTop:2 }}>{item.category}</div>}
-
-          {/* 드롭다운 */}
-          {showDrop && (
-            <div style={{
-              position:"absolute", top:"100%", left:0, right:0, zIndex:200,
-              background:"#fff", border:"1px solid var(--border)",
-              borderRadius:6, boxShadow:"0 4px 16px rgba(0,0,0,.12)",
-              maxHeight:240, overflowY:"auto", marginTop:2,
-            }}>
-              {filteredSpecs.length === 0 ? (
-                <div style={{ padding:"10px 12px", color:"var(--text-muted)", fontSize:12 }}>검색 결과 없음</div>
-              ) : filteredSpecs.map(s => (
-                <div key={`${s.catId}-${s.specId}`}
-                  onClick={() => handleSpecSelect(s)}
-                  style={{
-                    padding:"8px 12px", cursor:"pointer", borderBottom:"1px solid #f0f0f0",
-                    transition:"background .1s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background="#f5f7ff"}
-                  onMouseLeave={e => e.currentTarget.style.background="#fff"}
-                >
-                  <div style={{ fontSize:12, fontWeight:600 }}>{s.spec}</div>
-                  <div style={{ fontSize:11, color:"var(--text-muted)" }}>
-                    {s.catName}
-                    {!s.isShared && <span style={{ marginLeft:6, color:"#854D0E", background:"#FEF9C3", padding:"0 5px", borderRadius:4 }}>내 품목</span>}
-                    {" · "}₩{fmtNumber(s.listPrice)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </td>
-
-        {/* 수량 */}
-        <td>
-          <input type="number" min="0" value={item.qty}
-            onChange={e => onUpdate({ qty:e.target.value })}
-            style={{ width:56, textAlign:"center", padding:"4px 6px", border:"1px solid var(--border)", borderRadius:4 }}/>
-        </td>
-
-        {/* 소비자가 */}
-        <td style={{ textAlign:"right" }}>
-          <input
-            value={item.listPrice !== "" ? fmtNumber(item.listPrice) : ""}
-            onChange={e => { const v=e.target.value.replace(/,/g,""); onUpdate({ listPrice:v, manualPrice:false, unitPrice:v }); }}
-            placeholder="0" style={{ width:"100%", textAlign:"right", padding:"4px 6px", border:"1px solid var(--border)", borderRadius:4 }}/>
-        </td>
-
-        {/* DC율 */}
-        <td>
-          <div style={{ display:"flex", alignItems:"center", gap:3 }}>
-            <input type="number" min="0" max="99" value={item.dc}
-              onChange={e => onUpdate({ dc:e.target.value, manualPrice:false })}
-              placeholder="65" disabled={item.manualPrice}
-              style={{ width:46, textAlign:"center", padding:"4px 6px", border:"1px solid var(--border)", borderRadius:4 }}/>
-            <span style={{ fontSize:11, color:"var(--text-muted)" }}>%</span>
-          </div>
-          {dcApplied && <div style={{ fontSize:10, color:"var(--success)", fontWeight:700 }}>×{((100-Number(item.dc))/100).toFixed(2)}</div>}
-        </td>
-
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
         {/* 단가 */}
         <td>
           <input
@@ -352,13 +244,8 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
             onChange={handleUnitPriceChange}
             placeholder="수기 입력"
             style={{
-<<<<<<< HEAD
               width:"100%", textAlign:"right", padding:"5px 6px",
               border:"1px solid var(--border)", borderRadius:4, fontSize:13,
-=======
-              width:"100%", textAlign:"right", padding:"4px 6px",
-              border:"1px solid var(--border)", borderRadius:4,
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
               color: item.manualPrice ? "var(--accent)" : dcApplied ? "var(--success)" : "inherit",
               fontWeight: item.manualPrice || dcApplied ? 600 : 400,
             }}/>
@@ -366,27 +253,16 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
         </td>
 
         {/* 금액 */}
-<<<<<<< HEAD
         <td style={{ textAlign:"right", fontWeight:600, whiteSpace:"nowrap" }}>₩{fmtNumber(calc?.amount||0)}</td>
 
         {/* 부가세 */}
         <td style={{ textAlign:"right", color:"var(--text-sub)", whiteSpace:"nowrap" }}>₩{fmtNumber(calc?.vat||0)}</td>
-=======
-        <td style={{ textAlign:"right", fontWeight:600 }}>₩{fmtNumber(calc?.amount||0)}</td>
-
-        {/* 부가세 */}
-        <td style={{ textAlign:"right", color:"var(--text-sub)" }}>₩{fmtNumber(calc?.vat||0)}</td>
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
 
         {/* 비고 */}
         <td>
           <input value={item.note} onChange={e => onUpdate({ note:e.target.value })}
-<<<<<<< HEAD
             placeholder="비고"
             style={{ width:"100%", padding:"5px 6px", border:"1px solid var(--border)", borderRadius:4, fontSize:13 }}/>
-=======
-            placeholder="비고" style={{ width:"100%", padding:"4px 6px", border:"1px solid var(--border)", borderRadius:4 }}/>
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
         </td>
 
         {/* 삭제 */}
@@ -400,12 +276,8 @@ export default function ItemRow({ item, idx, productList, onUpdate, onRemove, ca
         <tr>
           <td></td>
           <td colSpan={9} style={{ padding:"4px 8px 10px", background:"var(--surface2)" }}>
-<<<<<<< HEAD
             <button
               style={{ fontSize:11, background:"none", border:"none", cursor:"pointer", color:"var(--text-muted)", marginBottom:4 }}
-=======
-            <button style={{ fontSize:11, background:"none", border:"none", cursor:"pointer", color:"var(--text-muted)", marginBottom:4 }}
->>>>>>> 4a50982429f020911ce4d7a485f17201cc7fbf3e
               onClick={() => setShowDetails(v=>!v)}>
               {showDetails?"▲":"▼"} 상세 사양 ({item.details.length}개)
             </button>
