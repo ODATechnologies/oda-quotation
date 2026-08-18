@@ -10,6 +10,7 @@ export default function CustomerManager({ showToast }) {
   const [list, setList] = useState(() => loadLS("oda_customers", INITIAL_CUSTOMERS));
   const [expanded, setExpanded] = useState(null);
   const [modal, setModal] = useState(null);
+  const [search, setSearch] = useState("");
 
   function saveList(next) {
     setList(next);
@@ -58,15 +59,48 @@ export default function CustomerManager({ showToast }) {
     showToast("삭제되었습니다.");
   }
 
+  const filteredList = search.trim()
+    ? list.filter(c =>
+        c.company?.toLowerCase().includes(search.toLowerCase()) ||
+        (c.contacts||[]).some(ct =>
+          ct.name?.toLowerCase().includes(search.toLowerCase()) ||
+          ct.phone?.toLowerCase().includes(search.toLowerCase()) ||
+          ct.email?.toLowerCase().includes(search.toLowerCase())
+        )
+      )
+    : list;
+
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
         <h2 style={{ fontSize:17, fontWeight:700, color:"var(--primary)" }}>거래처 관리</h2>
         <button className="btn btn-primary"
           onClick={() => setModal({ mode:"add-company", data:{ company:"" } })}>+ 업체 추가</button>
       </div>
 
-      {list.map(c => (
+      {/* 검색 */}
+      <div style={{ marginBottom:14 }}>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 업체명, 담당자명, 전화, 이메일 검색..."
+          style={{ width:"100%", maxWidth:420, padding:"8px 12px", border:"1px solid var(--border)", borderRadius:6, fontSize:13 }}
+        />
+        {search && (
+          <span style={{ fontSize:12, color:"var(--text-muted)", marginLeft:10 }}>
+            {filteredList.length}개 업체 검색됨
+          </span>
+        )}
+      </div>
+
+      {filteredList.length === 0 && !search && (
+        <div style={{ textAlign:"center", color:"var(--text-muted)", padding:48 }}>등록된 업체가 없습니다.</div>
+      )}
+      {filteredList.length === 0 && search && (
+        <div style={{ textAlign:"center", color:"var(--text-muted)", padding:48 }}>검색 결과가 없습니다.</div>
+      )}
+
+      {filteredList.map(c => (
         <div className="card" key={c.id} style={{ marginBottom:12 }}>
           <div className="card-header">
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -118,11 +152,7 @@ export default function CustomerManager({ showToast }) {
         </div>
       ))}
 
-      {list.length === 0 && (
-        <div style={{ textAlign:"center", color:"var(--text-muted)", padding:48 }}>
-          등록된 업체가 없습니다.
-        </div>
-      )}
+
 
       {modal && (modal.mode==="add-company" || modal.mode==="edit-company") && (
         <ModalWrap title={modal.mode==="add-company" ? "업체 추가" : "업체 수정"} onClose={() => setModal(null)}>

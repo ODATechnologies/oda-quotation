@@ -10,15 +10,11 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
 
   const rate = Number(exchangeRate) || 1350;
 
-  // KRW → USD 변환
-  const toUSD = (krw) => {
-    if (!krw && krw !== 0) return null;
-    return Math.round((Number(krw) / rate) * 100) / 100;
-  };
   const fmtUSD = (n) => {
-    if (n === null || n === undefined) return "";
+    if (n == null || n === "") return "";
     return "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits:2, maximumFractionDigits:2 });
   };
+  const krwFromUSD = (usd) => Math.round(Number(usd) * rate);
 
   // 전체 규격 flat
   const allSpecs = useMemo(() => {
@@ -28,7 +24,9 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
         result.push({
           catId: cat._id || cat.id, catName: cat.category,
           specId: s.id, spec: s.spec,
-          listPrice: s.listPrice, overseasPrice: s.overseasPrice ?? null, details: s.details || [],
+          listPrice: s.listPrice,
+          overseasPrice: s.overseasPrice ?? null,
+          details: s.details || [],
           isShared: cat._type === "shared" || !cat._type,
         });
       });
@@ -55,7 +53,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   }, []);
 
   function selectSpec(s) {
-    // 해외 모드이고 해외단가가 있으면 overseasPrice를 단가로 직접 사용
     const hasOverseas = isOverseas && s.overseasPrice != null && s.overseasPrice !== 0;
     setForm(f => ({
       ...f,
@@ -65,8 +62,8 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
       listPrice:    s.listPrice,
       overseasPrice:s.overseasPrice ?? null,
       dc:           "",
-      manualPrice:  hasOverseas,   // 해외단가 있으면 고정값으로 처리
-      unitPrice:    hasOverseas ? s.overseasPrice : "",
+      manualPrice:  hasOverseas,
+      unitPrice:    hasOverseas ? s.overseasPrice : s.listPrice,
       details:      s.details,
     }));
     setSpecSearch(s.spec);
@@ -74,64 +71,38 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   }
 
   function clearSpec() {
-    setForm(f => ({ ...f, category:"", spec:"", specId:"", listPrice:"", dc:"", manualPrice:false, unitPrice:"", details:[] }));
+    setForm(f => ({ ...f, category:"", spec:"", specId:"", listPrice:"", overseasPrice:null, dc:"", manualPrice:false, unitPrice:"", details:[] }));
     setSpecSearch("");
     setTimeout(() => searchRef.current?.focus(), 50);
   }
 
   const calc = useMemo(() => calcItem(form), [form]);
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
-
   function handleSave() { onSave({ ...calc }); onClose(); }
 
-  const inputStyle = {
-    width:"100%", padding:"9px 12px",
-    border:"1px solid var(--border)", borderRadius:6,
-    fontSize:14, fontFamily:"inherit", outline:"none",
-  };
+  const inputStyle = { width:"100%", padding:"9px 12px", border:"1px solid var(--border)", borderRadius:6, fontSize:14, fontFamily:"inherit", outline:"none" };
   const labelStyle = { fontSize:12, fontWeight:600, color:"var(--text-sub)", display:"block", marginBottom:5 };
 
-  // 금액 듀얼 표시 컴포넌트
-  const DualPrice = ({ krw, label }) => {
-    if (!krw && krw !== 0) return null;
-    const usd = toUSD(krw);
-    return (
-      <div style={{ marginTop:4, display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-        <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>₩{fmtNumber(krw)}</span>
-        {isOverseas && usd !== null && (
-          <>
-            <span style={{ color:"var(--text-muted)", fontSize:12 }}>→</span>
-            <span style={{ fontSize:13, fontWeight:700, color:"#059669" }}>{fmtUSD(usd)}</span>
-            <span style={{ fontSize:11, color:"var(--text-muted)" }}>(₩{fmtNumber(rate)}/USD)</span>
-          </>
-        )}
-      </div>
-    );
-  };
+  // 참고 금액 표시 (회색 작은 텍스트)
+  const RefPrice = ({ label, value }) => (
+    <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:3 }}>
+      {label}: <span style={{ fontWeight:600 }}>{value}</span>
+    </div>
+  );
 
   return (
-    <div style={{
-      position:"fixed", inset:0, background:"rgba(0,0,0,.5)",
-      display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000,
-    }} onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
-      <div style={{
-        background:"#fff", borderRadius:12,
-        boxShadow:"0 8px 40px rgba(0,0,0,.18)",
-        width:"min(780px, 95vw)", maxHeight:"90vh", overflowY:"auto",
-        display:"flex", flexDirection:"column",
-      }}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}
+      onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:"#fff", borderRadius:12, boxShadow:"0 8px 40px rgba(0,0,0,.18)", width:"min(780px, 95vw)", maxHeight:"90vh", overflowY:"auto", display:"flex", flexDirection:"column" }}>
+
         {/* 헤더 */}
-        <div style={{
-          padding:"18px 24px", borderBottom:"1px solid var(--border)",
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          position:"sticky", top:0, background:"#fff", zIndex:10,
-        }}>
+        <div style={{ padding:"18px 24px", borderBottom:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, background:"#fff", zIndex:10 }}>
           <div>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <span style={{ fontSize:16, fontWeight:700, color:"var(--primary)" }}>품목 입력</span>
               {isOverseas && (
                 <span style={{ background:"#EEF3FF", color:"#2563EB", fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:20 }}>
-                  🌐 해외 · ₩{fmtNumber(rate)} = $1
+                  🌐 해외 · USD $1 = ₩{fmtNumber(rate)}
                 </span>
               )}
             </div>
@@ -147,53 +118,47 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
             <label style={labelStyle}>규격 검색 <span style={{color:"var(--danger)"}}>*</span></label>
             <div style={{ display:"flex", alignItems:"center", gap:8, border:"1px solid var(--border)", borderRadius:6, padding:"4px 12px", background:"#fff" }}>
               <span style={{ fontSize:14, color:"var(--text-muted)" }}>🔍</span>
-              <input
-                ref={searchRef}
-                value={specSearch}
+              <input ref={searchRef} value={specSearch}
                 onChange={e => { setSpecSearch(e.target.value); setShowDrop(true); }}
                 onFocus={() => setShowDrop(true)}
                 placeholder="규격명, 카테고리, 사양으로 검색..."
                 style={{ flex:1, border:"none", outline:"none", fontSize:14, padding:"6px 0", fontFamily:"inherit" }}
               />
-              {form.spec && (
-                <button onClick={clearSpec} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-muted)", fontSize:16 }}>✕</button>
-              )}
+              {form.spec && <button onClick={clearSpec} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-muted)", fontSize:16 }}>✕</button>}
             </div>
 
             {showDrop && (
-              <div style={{
-                position:"absolute", top:"calc(100% + 4px)", left:0, right:0, zIndex:200,
-                background:"#fff", border:"1px solid var(--border)", borderRadius:8,
-                boxShadow:"0 8px 32px rgba(0,0,0,.12)", maxHeight:280, overflowY:"auto",
-              }}>
+              <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, zIndex:200, background:"#fff", border:"1px solid var(--border)", borderRadius:8, boxShadow:"0 8px 32px rgba(0,0,0,.12)", maxHeight:280, overflowY:"auto" }}>
                 {filteredSpecs.length === 0 ? (
                   <div style={{ padding:"20px 16px", textAlign:"center", color:"var(--text-muted)", fontSize:13 }}>검색 결과가 없습니다.</div>
                 ) : filteredSpecs.map(s => (
-                  <div key={`${s.catId}-${s.specId}`}
-                    onClick={() => selectSpec(s)}
+                  <div key={`${s.catId}-${s.specId}`} onClick={() => selectSpec(s)}
                     style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid #f4f4f4", display:"grid", gridTemplateColumns:"1fr auto", alignItems:"center", gap:16 }}
                     onMouseEnter={e => e.currentTarget.style.background="#F5F7FF"}
-                    onMouseLeave={e => e.currentTarget.style.background="#fff"}
-                  >
+                    onMouseLeave={e => e.currentTarget.style.background="#fff"}>
                     <div>
                       <div style={{ fontWeight:700, fontSize:14 }}>{s.spec}</div>
                       <div style={{ fontSize:12, color:"var(--text-muted)", marginTop:2 }}>
                         {s.catName}
                         {!s.isShared && <span style={{ marginLeft:6, background:"#FEF9C3", color:"#854D0E", padding:"1px 6px", borderRadius:4, fontSize:10 }}>내 품목</span>}
                       </div>
-                      {s.details?.length > 0 && (
-                        <div style={{ fontSize:11, color:"#999", marginTop:3 }}>
-                          {s.details.slice(0,2).join(" · ")}{s.details.length>2 && ` 외 ${s.details.length-2}개`}
-                        </div>
-                      )}
+                      {s.details?.length > 0 && <div style={{ fontSize:11, color:"#999", marginTop:3 }}>{s.details.slice(0,2).join(" · ")}{s.details.length>2 && ` 외 ${s.details.length-2}개`}</div>}
                     </div>
                     <div style={{ textAlign:"right" }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>₩{fmtNumber(s.listPrice)}</div>
-                      {isOverseas && s.overseasPrice != null && (
-                        <div style={{ fontSize:12, color:"#059669", fontWeight:700, marginTop:2 }}>{fmtUSD(s.overseasPrice)}</div>
-                      )}
-                      {isOverseas && s.overseasPrice == null && (
-                        <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:2 }}>해외단가 미등록</div>
+                      {isOverseas ? (
+                        s.overseasPrice != null ? (
+                          <>
+                            <div style={{ fontSize:14, fontWeight:700, color:"#059669" }}>{fmtUSD(s.overseasPrice)}</div>
+                            <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:2 }}>₩{fmtNumber(s.listPrice)}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize:12, color:"var(--text-muted)" }}>해외단가 미등록</div>
+                            <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:2 }}>₩{fmtNumber(s.listPrice)}</div>
+                          </>
+                        )
+                      ) : (
+                        <div style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>₩{fmtNumber(s.listPrice)}</div>
                       )}
                     </div>
                   </div>
@@ -214,40 +179,66 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
 
           {/* 수량 / 소비자가 / DC율 */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:16 }}>
+            {/* 수량 */}
             <div>
               <label style={labelStyle}>수량</label>
               <input type="number" min="0" value={form.qty}
                 onChange={e => set("qty", e.target.value)}
                 style={{ ...inputStyle, textAlign:"center" }}/>
             </div>
+
+            {/* 소비자가 */}
             <div>
-              <label style={labelStyle}>소비자가 (List Price)</label>
-              <input
-                value={form.listPrice !== "" ? fmtNumber(form.listPrice) : ""}
-                onChange={e => { const v=e.target.value.replace(/,/g,""); set("listPrice",v); if(!form.manualPrice) set("unitPrice",v); }}
-                placeholder="0"
-                style={{ ...inputStyle, textAlign:"right" }}/>
-              {!isOverseas && <DualPrice krw={Number(form.listPrice)||0} />}
-              {isOverseas && form.overseasPrice != null && (
-                <div style={{marginTop:4,fontSize:12,color:"#059669",fontWeight:600}}>
-                  해외단가: {fmtUSD(form.overseasPrice)}
-                </div>
+              <label style={labelStyle}>
+                {isOverseas ? "해외단가 List Price (USD)" : "소비자가 List Price (KRW)"}
+              </label>
+              {isOverseas ? (
+                // 해외: USD 입력 (= overseasPrice)
+                <>
+                  <div style={{ position:"relative" }}>
+                    <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#059669", fontWeight:700, fontSize:14 }}>$</span>
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={form.overseasPrice ?? ""}
+                      onChange={e => {
+                        const v = e.target.value;
+                        set("overseasPrice", v === "" ? null : Number(v));
+                        set("unitPrice", v === "" ? "" : Number(v));
+                        set("manualPrice", true);
+                      }}
+                      placeholder="0.00"
+                      style={{ ...inputStyle, textAlign:"right", paddingLeft:22, color:"#059669", fontWeight:600 }}
+                    />
+                  </div>
+                  {form.listPrice != null && form.listPrice !== "" && (
+                    <RefPrice label="국내 소비자가" value={`₩${fmtNumber(form.listPrice)}`} />
+                  )}
+                </>
+              ) : (
+                // 국내: KRW 입력
+                <input
+                  value={form.listPrice !== "" ? fmtNumber(form.listPrice) : ""}
+                  onChange={e => { const v=e.target.value.replace(/,/g,""); set("listPrice",v); if(!form.manualPrice) set("unitPrice",v); }}
+                  placeholder="0"
+                  style={{ ...inputStyle, textAlign:"right" }}/>
               )}
             </div>
+
+            {/* DC율 (국내만) */}
             <div>
               <label style={labelStyle}>DC율 (%)</label>
               <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                 <input type="number" min="0" max="99" value={form.dc}
                   onChange={e => { set("dc", e.target.value); set("manualPrice", false); }}
-                  placeholder="65" disabled={form.manualPrice}
-                  style={{ ...inputStyle, textAlign:"center" }}/>
+                  placeholder="65"
+                  disabled={form.manualPrice || isOverseas}
+                  style={{ ...inputStyle, textAlign:"center", opacity: isOverseas ? .4 : 1 }}/>
                 <span style={{ fontSize:13, color:"var(--text-muted)", whiteSpace:"nowrap" }}>%</span>
               </div>
-              {form.dc && !form.manualPrice && (
-                <div style={{ fontSize:11, color:"var(--success)", marginTop:4, fontWeight:600 }}>
-                  ×{((100-Number(form.dc))/100).toFixed(2)} 적용
-                </div>
+              {form.dc && !form.manualPrice && !isOverseas && (
+                <div style={{ fontSize:11, color:"var(--success)", marginTop:4, fontWeight:600 }}>×{((100-Number(form.dc))/100).toFixed(2)} 적용</div>
               )}
+              {isOverseas && <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:4 }}>해외 견적 미적용</div>}
             </div>
           </div>
 
@@ -255,26 +246,41 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
             <div>
               <label style={labelStyle}>
-                단가 (적용)
-                {form.manualPrice && <span style={{ marginLeft:6, color:"var(--accent)", fontSize:11 }}>수기 입력됨</span>}
+                {isOverseas ? "단가 (USD)" : "단가 (적용)"}
+                {form.manualPrice && !isOverseas && <span style={{ marginLeft:6, color:"var(--accent)", fontSize:11 }}>수기 입력됨</span>}
               </label>
-              <input
-                value={calc.unitPrice ? fmtNumber(calc.unitPrice) : ""}
-                onChange={e => { const v=e.target.value.replace(/,/g,""); set("unitPrice",v); set("manualPrice",true); set("dc",""); }}
-                placeholder="단가를 직접 입력하거나 DC율로 자동 계산"
-                style={{
-                  ...inputStyle, textAlign:"right",
-                  color: form.manualPrice ? "var(--accent)" : form.dc ? "var(--success)" : "inherit",
-                  fontWeight: form.manualPrice || form.dc ? 600 : 400,
-                }}/>
-              {!isOverseas && <DualPrice krw={calc.unitPrice} />}
-              {isOverseas && (
-                <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontSize:13,fontWeight:700,color:"#059669"}}>
-                    {fmtUSD(Number(calc.unitPrice))}
-                  </span>
-                  <span style={{fontSize:11,color:"var(--text-muted)"}}>USD (직접 적용)</span>
-                </div>
+              {isOverseas ? (
+                // 해외: USD 단가 (= overseasPrice와 동일)
+                <>
+                  <div style={{ position:"relative" }}>
+                    <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#059669", fontWeight:700, fontSize:14 }}>$</span>
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={form.unitPrice ?? ""}
+                      onChange={e => { const v=e.target.value; set("unitPrice", v===""?"":Number(v)); set("overseasPrice", v===""?null:Number(v)); set("manualPrice",true); }}
+                      placeholder="0.00"
+                      style={{ ...inputStyle, textAlign:"right", paddingLeft:22, color:"#059669", fontWeight:600 }}
+                    />
+                  </div>
+                  {/* 하단: 환율 적용 KRW 참고금액 */}
+                  {form.unitPrice != null && form.unitPrice !== "" && (
+                    <RefPrice
+                      label={`₩${fmtNumber(rate)}/USD 환율 기준`}
+                      value={`≈ ₩${fmtNumber(krwFromUSD(form.unitPrice))}`}
+                    />
+                  )}
+                </>
+              ) : (
+                // 국내: KRW 단가
+                <>
+                  <input
+                    value={calc.unitPrice ? fmtNumber(calc.unitPrice) : ""}
+                    onChange={e => { const v=e.target.value.replace(/,/g,""); set("unitPrice",v); set("manualPrice",true); set("dc",""); }}
+                    placeholder="단가를 직접 입력하거나 DC율로 자동 계산"
+                    style={{ ...inputStyle, textAlign:"right",
+                      color: form.manualPrice ? "var(--accent)" : form.dc ? "var(--success)" : "inherit",
+                      fontWeight: form.manualPrice || form.dc ? 600 : 400 }}/>
+                </>
               )}
             </div>
             <div>
@@ -285,23 +291,24 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
           </div>
 
           {/* 계산 결과 요약 */}
-          <div style={{
-            background:"linear-gradient(135deg,#1E3C78 0%,#2563EB 100%)",
-            borderRadius:10, padding:"16px 20px", color:"#fff",
-          }}>
+          <div style={{ background:"linear-gradient(135deg,#1E3C78 0%,#2563EB 100%)", borderRadius:10, padding:"16px 20px", color:"#fff" }}>
             {isOverseas ? (
-              /* 해외: USD 직접 표시 */
-              <div style={{ textAlign:"center" }}>
-                <div style={{ fontSize:11, opacity:.7, marginBottom:6 }}>금액 (USD)</div>
-                <div style={{ fontSize:22, fontWeight:800, color:"#86EFAC" }}>
-                  {fmtUSD(Number(calc.amount) * Number(form.qty || 1) / Number(form.qty || 1))}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
+                <div style={{ textAlign:"center", borderRight:"1px solid rgba(255,255,255,.2)", paddingRight:16 }}>
+                  <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>단가 (USD)</div>
+                  <div style={{ fontSize:16, fontWeight:700 }}>{fmtUSD(Number(form.unitPrice)||0)}</div>
                 </div>
-                <div style={{ fontSize:11, opacity:.6, marginTop:4 }}>
-                  단가 {fmtUSD(Number(calc.unitPrice))} × {form.qty || 1}개
+                <div style={{ textAlign:"center", paddingLeft:16 }}>
+                  <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>금액 (USD)</div>
+                  <div style={{ fontSize:20, fontWeight:800, color:"#86EFAC" }}>
+                    {fmtUSD((Number(form.unitPrice)||0) * (Number(form.qty)||1))}
+                  </div>
+                  <div style={{ fontSize:10, opacity:.6, marginTop:3 }}>
+                    ≈ ₩{fmtNumber(krwFromUSD((Number(form.unitPrice)||0) * (Number(form.qty)||1)))} 참고
+                  </div>
                 </div>
               </div>
             ) : (
-              /* 국내: 공급가액 / 부가세 / 합계 */
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:0 }}>
                 {[
                   ["공급가액", `₩${fmtNumber(calc.amount)}`],
@@ -319,11 +326,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
         </div>
 
         {/* 푸터 */}
-        <div style={{
-          padding:"14px 24px", borderTop:"1px solid var(--border)",
-          display:"flex", justifyContent:"flex-end", gap:8,
-          position:"sticky", bottom:0, background:"#fff",
-        }}>
+        <div style={{ padding:"14px 24px", borderTop:"1px solid var(--border)", display:"flex", justifyContent:"flex-end", gap:8, position:"sticky", bottom:0, background:"#fff" }}>
           <button className="btn btn-secondary" onClick={onClose}>취소</button>
           <button className="btn btn-primary" onClick={handleSave} style={{ minWidth:100 }}>확인</button>
         </div>

@@ -238,11 +238,28 @@ export default function QuotationPage({ showToast }) {
 
       {/* 해외 모드: 환율 입력 */}
       {isOverseas && (
-        <div style={{ background:"#EEF3FF", border:"1px solid #C7D7FD", borderRadius:8, padding:"10px 16px", marginBottom:14, display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-          <span style={{ fontSize:13, fontWeight:700, color:"#1E3C78" }}>🌐 해외 견적 모드</span>
-          <span style={{ fontSize:12, color:"#4B5563" }}>· 공급자: <strong>{SUPPLIER_INFO_OVERSEAS.name}</strong></span>
-          <span style={{ fontSize:12, color:"#4B5563" }}>· VAT 미적용</span>
-          <span style={{ fontSize:12, color:"#059669", fontWeight:600 }}>· 품목별 해외단가(USD) 직접 적용</span>
+        <div style={{ background:"#EEF3FF", border:"1px solid #C7D7FD", borderRadius:8, padding:"12px 16px", marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+            <span style={{ fontSize:13, fontWeight:700, color:"#1E3C78" }}>🌐 해외 견적 모드</span>
+            <span style={{ fontSize:12, color:"#4B5563" }}>· 공급자: <strong>{SUPPLIER_INFO_OVERSEAS.name}</strong></span>
+            <span style={{ fontSize:12, color:"#4B5563" }}>· VAT 미적용</span>
+            <span style={{ fontSize:12, color:"#059669", fontWeight:600 }}>· 품목별 해외단가(USD) 직접 적용</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10 }}>
+            <span style={{ fontSize:12, fontWeight:600, color:"#1E3C78" }}>환율 (참고용)</span>
+            <span style={{ fontSize:12, color:"#4B5563" }}>USD $1 =</span>
+            <div style={{ position:"relative" }}>
+              <input
+                type="number"
+                min="0"
+                value={exchangeRate}
+                onChange={e => setExchangeRate(e.target.value)}
+                style={{ width:110, padding:"5px 10px", border:"1px solid #C7D7FD", borderRadius:6, fontSize:13, textAlign:"right", paddingRight:28 }}
+              />
+              <span style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", fontSize:12, color:"#6B7280" }}>₩</span>
+            </div>
+            <span style={{ fontSize:11, color:"#6B7280" }}>입력 시 품목 팝업에서 KRW 참고금액 표시</span>
+          </div>
         </div>
       )}
 
