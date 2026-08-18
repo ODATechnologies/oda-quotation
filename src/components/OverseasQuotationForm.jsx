@@ -76,74 +76,23 @@ export default function OverseasQuotationForm({ form, onChange, staffInfo, suppl
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
 
-      {/* ── 공급자 (Shipper/Exporter) ── */}
+      {/* ── 공급자 추가 정보 (Address, Fax만) ── */}
       <div className="card">
-        <div className="card-header"><span className="card-title">Shipper / Exporter</span></div>
+        <div className="card-header">
+          <span className="card-title">Shipper / Exporter 추가 정보</span>
+          <span style={{ fontSize:12, color:"var(--text-muted)" }}>상단 ODA TECHNOLOGIES 정보가 자동 반영됩니다</span>
+        </div>
         <div className="card-body">
           <div className="form-grid form-grid-2" style={{ gap:12 }}>
-            <div className="form-group">
-              <label>Company</label>
-              <input value={form.shipperCompany || supplierInfo?.name || "ODA Technologies Co., Ltd."}
-                onChange={e => set("shipperCompany", e.target.value)}/>
-            </div>
             <div className="form-group">
               <label>Address</label>
               <input value={form.shipperAddress || "62, Bupyeong-daero 329 Beon-gil, Bupyeong-gu, Incheon, Republic of Korea (21315)"}
                 onChange={e => set("shipperAddress", e.target.value)}/>
             </div>
             <div className="form-group">
-              <label>Attn (담당자)</label>
-              <input value={form.shipperAttn || staffInfo?.name || ""}
-                onChange={e => set("shipperAttn", e.target.value)} placeholder="담당자 이름"/>
-            </div>
-            <div className="form-group">
-              <label>Tel</label>
-              <input value={form.shipperTel || staffInfo?.phone || ""}
-                onChange={e => set("shipperTel", e.target.value)}/>
-            </div>
-            <div className="form-group">
               <label>Fax</label>
               <input value={form.shipperFax || "82-32-715-5456"}
                 onChange={e => set("shipperFax", e.target.value)}/>
-            </div>
-            <div className="form-group">
-              <label>E-mail</label>
-              <input value={form.shipperEmail || ""}
-                onChange={e => set("shipperEmail", e.target.value)} placeholder="ate1@odacore.com"/>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── 수요자 (Consignee) ── */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Consignee</span></div>
-        <div className="card-body">
-          <div className="form-grid form-grid-2" style={{ gap:12 }}>
-            <div className="form-group">
-              <label>Company</label>
-              <input value={form.consigneeCompany || ""}
-                onChange={e => set("consigneeCompany", e.target.value)} placeholder="업체명"/>
-            </div>
-            <div className="form-group">
-              <label>Address</label>
-              <input value={form.consigneeAddress || ""}
-                onChange={e => set("consigneeAddress", e.target.value)} placeholder="주소"/>
-            </div>
-            <div className="form-group">
-              <label>Attn</label>
-              <input value={form.consigneeAttn || ""}
-                onChange={e => set("consigneeAttn", e.target.value)} placeholder="담당자명"/>
-            </div>
-            <div className="form-group">
-              <label>Tel</label>
-              <input value={form.consigneeTel || ""}
-                onChange={e => set("consigneeTel", e.target.value)}/>
-            </div>
-            <div className="form-group" style={{ gridColumn:"1/-1" }}>
-              <label>E-mail</label>
-              <input value={form.consigneeEmail || ""}
-                onChange={e => set("consigneeEmail", e.target.value)}/>
             </div>
           </div>
         </div>

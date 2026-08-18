@@ -146,16 +146,19 @@ export default function QuotationPage({ showToast }) {
   function removeItem(id) { setItems(p => p.filter(i => i.id!==id)); }
 
   function buildExportData() {
-    // 해외 폼에 담당자/공급자 자동 반영
+    // 해외 폼 - 상단 공급자/담당자/고객 정보 자동 반영
     const mergedOverseasForm = {
       ...overseasForm,
-      shipperAttn:  overseasForm.shipperAttn  || staff.name  || "",
-      shipperTel:   overseasForm.shipperTel   || staff.phone || "",
-      shipperEmail: overseasForm.shipperEmail || "",
-      consigneeCompany: overseasForm.consigneeCompany || customerName,
-      consigneeAttn:    overseasForm.consigneeAttn    || contact.name  || "",
-      consigneeTel:     overseasForm.consigneeTel     || contact.phone || "",
-      consigneeEmail:   overseasForm.consigneeEmail   || contact.email || "",
+      // Shipper: 상단 ODA TECHNOLOGIES 정보 자동 반영
+      shipperCompany: supplier.name || "ODA Technologies Co., Ltd.",
+      shipperAttn:    staff.name  || "",
+      shipperTel:     staff.phone || "",
+      shipperEmail:   overseasForm.shipperEmail || "",
+      // Consignee: 상단 CUSTOMER 정보 자동 반영
+      consigneeCompany: customerName,
+      consigneeAttn:    contact.name  || "",
+      consigneeTel:     contact.phone || "",
+      consigneeEmail:   contact.email || "",
     };
     return {
       docNo, date, mode,

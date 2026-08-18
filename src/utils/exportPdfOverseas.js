@@ -16,11 +16,12 @@ export function exportToPdfOverseas(data) {
     shipperTel      = "",
     shipperFax      = "82-32-715-5456",
     shipperEmail    = "",
-    consigneeCompany= "",
+    // Consignee는 customer/contact에서 자동
+    consigneeCompany= data.customer || "",
     consigneeAddress= "",
-    consigneeAttn   = "",
-    consigneeTel    = "",
-    consigneeEmail  = "",
+    consigneeAttn   = data.contact?.name  || "",
+    consigneeTel    = data.contact?.phone || "",
+    consigneeEmail  = data.contact?.email || "",
     invoiceNo       = docNo,
     payment         = "T/T before shipment",
     lcBank          = "",
@@ -77,7 +78,7 @@ body{
 /* 타이틀 */
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
 .top .title{font-size:20px;font-weight:700;letter-spacing:2px;color:#111;text-align:center;flex:1;}
-.top .logo{height:38px;object-fit:contain;}
+.top .logo{height:20px;object-fit:contain;}
 
 /* 메인 테이블 */
 .main-tbl{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:6px;}
@@ -111,8 +112,9 @@ body{
 </head>
 <body>
 
-<!-- 타이틀 -->
+<!-- 타이틀: QUOTATION 중앙, 로고 우상단 -->
 <div class="top">
+  <div style="width:60px;"></div>
   <div class="title">QUOTATION</div>
   <img src="${logoSrc}" class="logo" alt="ODA"/>
 </div>
@@ -120,8 +122,8 @@ body{
 <!-- 메인 정보 테이블 -->
 <table class="main-tbl">
   <tr>
-    <!-- 좌: Shipper -->
-    <td rowspan="5" style="width:48%;vertical-align:top;">
+    <!-- 좌: Shipper (60%) -->
+    <td rowspan="5" style="width:60%;vertical-align:top;">
       <div class="hdr">Shipper/Exporter</div>
       <div class="val" style="font-weight:700;margin-top:2px;">${shipperCompany}</div>
       <div class="val">${shipperAddress}</div>
@@ -140,7 +142,7 @@ body{
       ${consigneeEmail ? `<div class="val">E: ${consigneeEmail}</div>` : ""}
     </td>
     <!-- 우상: Invoice No & Date -->
-    <td colspan="2">
+    <td colspan="2" style="width:40%">
       <span class="hdr">No.&amp; Date of Invoice</span><br/>
       <span class="val">${invoiceNo},</span>
       <span class="val" style="float:right">${invoiceDateStr}</span>
