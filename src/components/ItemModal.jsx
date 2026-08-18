@@ -28,7 +28,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
         result.push({
           catId: cat._id || cat.id, catName: cat.category,
           specId: s.id, spec: s.spec,
-          listPrice: s.listPrice, details: s.details || [],
+          listPrice: s.listPrice, overseasPrice: s.overseasPrice ?? null, details: s.details || [],
           isShared: cat._type === "shared" || !cat._type,
         });
       });
@@ -56,17 +56,17 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
 
   function selectSpec(s) {
     // 해외 모드이고 해외단가가 있으면 overseasPrice를 단가로 직접 사용
-    const useOverseas = isOverseas && s.overseasPrice != null;
+    const hasOverseas = isOverseas && s.overseasPrice != null && s.overseasPrice !== 0;
     setForm(f => ({
       ...f,
       category:     s.catName,
       spec:         s.spec,
       specId:       s.specId,
       listPrice:    s.listPrice,
-      overseasPrice:s.overseasPrice || null,
-      dc:           useOverseas ? "" : "",
-      manualPrice:  useOverseas,          // 해외단가는 수기 단가처럼 고정
-      unitPrice:    useOverseas ? s.overseasPrice : s.listPrice,
+      overseasPrice:s.overseasPrice ?? null,
+      dc:           "",
+      manualPrice:  hasOverseas,   // 해외단가 있으면 고정값으로 처리
+      unitPrice:    hasOverseas ? s.overseasPrice : "",
       details:      s.details,
     }));
     setSpecSearch(s.spec);

@@ -279,25 +279,24 @@ function CategoryForm({ onSave, onClose }) {
 function SpecForm({ initial, onSave, onClose }) {
   const [spec,          setSpec]         = useState(initial.spec || "");
   const [listPrice,     setListPrice]    = useState(initial.listPrice || "");
-  const [overseasPrice, setOverseasPrice]= useState(initial.overseasPrice || "");
+  // 해외단가: 입력 중에는 raw string 유지 (소수점 문제 방지)
+  const [overseasPrice, setOverseasPrice]= useState(
+    initial.overseasPrice != null ? String(initial.overseasPrice) : ""
+  );
   const [detailsText,   setDetailsText]  = useState((initial.details||[]).join("\n"));
 
   function handleSave() {
     const details = detailsText.split("\n").map(s=>s.trim()).filter(Boolean);
+    const op = overseasPrice.trim();
     onSave({
       spec,
       listPrice:     Number(String(listPrice).replace(/,/g,"")),
-      overseasPrice: overseasPrice !== "" ? Number(String(overseasPrice).replace(/,/g,"")) : null,
+      overseasPrice: op !== "" ? Number(op) : null,
       details,
     });
   }
 
   const fmtKRW = (v) => v !== "" ? Number(String(v).replace(/,/g,"")).toLocaleString("ko-KR") : "";
-  const fmtOverseas = (v) => {
-    if (v === "" || v === null || v === undefined) return "";
-    const n = Number(String(v).replace(/,/g,""));
-    return isNaN(n) ? "" : n.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
-  };
 
   return (<>
     <div className="form-grid" style={{gap:12}}>
@@ -307,7 +306,8 @@ function SpecForm({ initial, onSave, onClose }) {
       </div>
       <div className="form-group">
         <label>소비자가 (KRW, 원)</label>
-        <input value={fmtKRW(listPrice)}
+        <input
+          value={fmtKRW(listPrice)}
           onChange={e=>setListPrice(e.target.value.replace(/,/g,""))}
           placeholder="100,000,000"
           style={{textAlign:"right"}}/>
@@ -315,17 +315,28 @@ function SpecForm({ initial, onSave, onClose }) {
       </div>
       <div className="form-group">
         <label style={{display:"flex",alignItems:"center",gap:6}}>
-          해외단가 (USD, $)
+          해외단가 (USD)
           <span style={{fontSize:10,background:"#ECFDF5",color:"#059669",padding:"1px 6px",borderRadius:10,fontWeight:600}}>해외 견적 전용</span>
         </label>
         <div style={{position:"relative"}}>
           <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"#059669",fontWeight:700,fontSize:14}}>$</span>
-          <input value={fmtOverseas(overseasPrice)}
-            onChange={e=>setOverseasPrice(e.target.value.replace(/,/g,""))}
+          {/* type="number"로 소수점 자유 입력, 포맷 변환 없음 */}
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={overseasPrice}
+            onChange={e => setOverseasPrice(e.target.value)}
             placeholder="0.00"
-            style={{textAlign:"right",paddingLeft:22}}/>
+            style={{textAlign:"right", paddingLeft:22}}
+          />
         </div>
-        <div style={{fontSize:11,color:"var(--text-muted)",marginTop:3}}>해외 견적 시 환율 변환 없이 직접 적용</div>
+        {overseasPrice !== "" && !isNaN(Number(overseasPrice)) && (
+          <div style={{fontSize:11,color:"#059669",fontWeight:600,marginTop:3}}>
+            = ${Number(overseasPrice).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
+          </div>
+        )}
+        <div style={{fontSize:11,color:"var(--text-muted)",marginTop:2}}>환율 변환 없이 USD 직접 적용</div>
       </div>
       <div className="form-group" style={{gridColumn:"1 / -1"}}>
         <label>상세 사양 (줄바꿈으로 구분)</label>
