@@ -20,9 +20,9 @@ export default function CustomerManager({ showToast }) {
   function saveCompany(data) {
     let next;
     if (modal.mode === "add-company") {
-      next = [...list, { id: Date.now(), company: data.company, contacts: [] }];
+      next = [...list, { id: Date.now(), company: data.company, address: data.address||"", contacts: [] }];
     } else {
-      next = list.map(c => c.id === modal.data.id ? { ...c, company: data.company } : c);
+      next = list.map(c => c.id === modal.data.id ? { ...c, company: data.company, address: data.address||"" } : c);
     }
     saveList(next);
     showToast("저장되었습니다.", "success");
@@ -106,6 +106,7 @@ export default function CustomerManager({ showToast }) {
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <span className="card-title">{c.company}</span>
               <span className="badge badge-blue">{c.contacts.length}명</span>
+              {c.address && <span style={{fontSize:11,color:"var(--text-muted)",marginLeft:4}}>📍 {c.address}</span>}
             </div>
             <div style={{ display:"flex", gap:6 }}>
               <button className="btn btn-secondary btn-sm"
@@ -183,15 +184,20 @@ function ModalWrap({ title, children, onClose }) {
 
 function CompanyForm({ initial, onSave, onClose }) {
   const [company, setCompany] = useState(initial.company || "");
+  const [address, setAddress] = useState(initial.address || "");
   return (
     <>
       <div className="form-group">
         <label>업체명</label>
         <input value={company} onChange={e => setCompany(e.target.value)} placeholder="예: 삼성전자" autoFocus />
       </div>
+      <div className="form-group">
+        <label>주소 <span style={{color:"var(--text-muted)",fontSize:11,fontWeight:400}}>(선택, 해외 견적서에 자동 반영)</span></label>
+        <input value={address} onChange={e => setAddress(e.target.value)} placeholder="예: P.O. Box 43221, Channel Street, Abu Dhabi, UAE" />
+      </div>
       <div className="modal-footer">
         <button className="btn btn-secondary" onClick={onClose}>취소</button>
-        <button className="btn btn-primary" onClick={() => onSave({ ...initial, company })}>저장</button>
+        <button className="btn btn-primary" onClick={() => onSave({ ...initial, company, address })}>저장</button>
       </div>
     </>
   );

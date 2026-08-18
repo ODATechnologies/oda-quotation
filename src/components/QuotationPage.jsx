@@ -156,6 +156,7 @@ export default function QuotationPage({ showToast }) {
       shipperEmail:   overseasForm.shipperEmail || "",
       // Consignee: 상단 CUSTOMER 정보 자동 반영
       consigneeCompany: customerName,
+      consigneeAddress: custObj?.address || "",
       consigneeAttn:    contact.name  || "",
       consigneeTel:     contact.phone || "",
       consigneeEmail:   contact.email || "",
