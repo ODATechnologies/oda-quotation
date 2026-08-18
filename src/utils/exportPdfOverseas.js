@@ -35,7 +35,6 @@ export function exportToPdfOverseas(data) {
   } = overseasForm;
 
   const fileName = `Quotation_${docNo.replace(/[^a-zA-Z0-9]/g,"_")}`;
-
   const fmtUSD = (n) => n != null
     ? "$" + Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})
     : "-";
@@ -43,29 +42,9 @@ export function exportToPdfOverseas(data) {
   const now = new Date();
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const invoiceDateStr = `${now.getDate()}th ${months[now.getMonth()]}, ${now.getFullYear()}`;
-
   const validDateStr = validUntil
     ? new Date(validUntil).toLocaleDateString("en-US",{year:"numeric",month:"long",day:"numeric"})
     : "";
-
-  // 품목 rows - 각 품목마다 독립 행
-  const itemRows = items.map((item, idx) => {
-    const usd    = item.unitPriceUSD ?? item.unitPrice ?? 0;
-    const total  = item.amountUSD   ?? item.amount    ?? 0;
-    const qty    = item.qty ?? 1;
-    const details = (item.details||[]).map(d=>`<div style="font-size:7px;color:#555;margin-top:1px;">- ${d}</div>`).join("");
-    return `
-    <tr>
-      <td style="vertical-align:top;padding:6px 5px;">
-        <div style="font-weight:700;font-size:8px;">${item.category||""}</div>
-        <div style="font-size:8px;margin-top:1px;">${item.spec||""}</div>
-        ${details}
-      </td>
-      <td style="text-align:center;vertical-align:top;padding:6px 5px;font-size:8px;">${qty} PCS</td>
-      <td style="text-align:right;vertical-align:top;padding:6px 5px;font-size:8px;">${fmtUSD(usd)}</td>
-      <td style="text-align:right;vertical-align:top;padding:6px 5px;font-size:8px;font-weight:700;">${fmtUSD(total)}</td>
-    </tr>`;
-  }).join("");
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -91,24 +70,48 @@ body{
 
 /* 타이틀 */
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.top .spacer{width:20px;height:20px;}
 .top .logo{height:20px;object-fit:contain;}
 .top .title{font-size:20px;font-weight:700;letter-spacing:2px;color:#111;text-align:center;flex:1;}
 
-/* 공통 테이블 */
-.bd{border:1px solid #999;}
 .hdr{font-weight:700;font-size:7.5px;text-decoration:underline;}
 .val{font-size:8px;}
 
-/* 품목 테이블 */
-.item-tbl{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:0;}
-.item-tbl td,.item-tbl th{border:1px solid #999;}
-.item-tbl th{font-weight:700;font-size:8px;text-align:center;padding:4px 5px;background:#f5f5f5;}
+/* 상단 정보 테이블 */
+.main-tbl{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:6px;}
+.main-tbl td{border:1px solid #999;padding:4px 6px;vertical-align:top;}
+
+/* 품목 영역 - 테이블 없이 구분선만 */
+.item-area{width:100%;margin-bottom:6px;}
+.item-hdr{
+  display:grid;
+  grid-template-columns:28% 36% 12% 12% 12%;
+  border-top:1px solid #999;
+  border-bottom:1px solid #999;
+  padding:4px 0;
+  font-weight:700;font-size:8px;
+}
+.item-hdr > div{padding:0 4px;text-align:center;}
+.item-hdr > div:nth-child(2){text-align:left;}
+.item-row{
+  display:grid;
+  grid-template-columns:28% 36% 12% 12% 12%;
+  border-bottom:1px solid #eee;
+  padding:5px 0;
+  font-size:8px;
+  align-items:start;
+}
+.item-row > div{padding:0 4px;}
+.item-row > div:nth-child(3),
+.item-row > div:nth-child(4),
+.item-row > div:nth-child(5){text-align:right;}
 
 /* TOTAL */
-.total-row{border-top:2px solid #333;border-bottom:1px solid #999;
-  display:flex;justify-content:space-between;padding:5px;
-  font-weight:700;font-size:9px;margin-bottom:8px;}
+.total-row{
+  border-top:2px solid #333;
+  display:flex;justify-content:space-between;
+  padding:5px 4px;font-weight:700;font-size:9px;
+  margin-bottom:8px;
+}
 
 /* Conditions */
 .cond{font-size:8px;line-height:1.7;margin-bottom:8px;}
@@ -126,23 +129,23 @@ body{
 </head>
 <body>
 
-<!-- 타이틀: 로고 좌 더미 / QUOTATION 중앙 / 로고 우 -->
+<!-- 타이틀 -->
 <div class="top">
-  <div class="spacer"></div>
+  <div style="width:20px;"></div>
   <div class="title">QUOTATION</div>
   <img src="${logoSrc}" class="logo" alt="ODA"/>
 </div>
 
-<!-- 상단 정보 테이블 (6:4 비율) -->
-<table style="width:100%;border-collapse:collapse;margin-bottom:0;" class="bd">
+<!-- 상단 정보 테이블 (6:4) -->
+<table class="main-tbl">
   <colgroup>
     <col style="width:60%"/>
     <col style="width:40%"/>
   </colgroup>
   <tbody>
-    <!-- Row1: Shipper / Invoice No -->
     <tr>
-      <td rowspan="6" style="border-right:1px solid #999;padding:6px 7px;vertical-align:top;">
+      <!-- 좌: Shipper + Consignee (rowspan 전체) -->
+      <td rowspan="6" style="vertical-align:top;">
         <div class="hdr">Shipper/Exporter</div>
         <div class="val" style="font-weight:700;margin-top:2px;">${shipperCompany}</div>
         <div class="val">${shipperAddress}</div>
@@ -160,59 +163,57 @@ body{
         ${consigneeTel   ? `<div class="val">Tel: ${consigneeTel}</div>` : ""}
         ${consigneeEmail ? `<div class="val">E: ${consigneeEmail}</div>` : ""}
       </td>
-      <td style="border-bottom:1px solid #999;padding:5px 7px;">
+      <!-- 우: Invoice No -->
+      <td>
         <div class="hdr">No.&amp; Date of Invoice</div>
         <div class="val" style="display:flex;justify-content:space-between;margin-top:2px;">
           <span>${invoiceNo}</span><span>${invoiceDateStr}</span>
         </div>
       </td>
     </tr>
-    <!-- Row2: Payment -->
     <tr>
-      <td style="border-bottom:1px solid #999;padding:5px 7px;">
+      <td>
         <div class="hdr">Payment</div>
         <div class="val" style="text-align:center;font-weight:700;margin-top:2px;">${payment}</div>
       </td>
     </tr>
-    <!-- Row3: L/C issuing bank -->
     <tr>
-      <td style="border-bottom:1px solid #999;padding:5px 7px;">
+      <td>
         <div class="hdr">L/C issuing bank</div>
         <div class="val" style="min-height:14px;margin-top:2px;">${lcBank}</div>
       </td>
     </tr>
-    <!-- Row4: Buyer + Remarks 병합 (세로로) -->
+    <!-- Buyer + Remarks 넓게 -->
     <tr>
-      <td style="border-bottom:1px solid #999;padding:5px 7px;">
+      <td style="min-height:40px;">
         <div class="hdr">Buyer (if other than consignee)</div>
-        <div class="val" style="min-height:12px;margin-top:2px;">${buyer}</div>
+        <div class="val" style="min-height:28px;margin-top:2px;">${buyer}</div>
       </td>
     </tr>
-    <!-- Row5: Remarks -->
     <tr>
-      <td style="border-bottom:1px solid #999;padding:5px 7px;vertical-align:top;">
+      <td style="min-height:48px;">
         <div class="hdr">Remarks</div>
-        <div class="val" style="min-height:28px;margin-top:2px;">${remarks}</div>
+        <div class="val" style="min-height:36px;margin-top:2px;">${remarks}</div>
       </td>
     </tr>
-    <!-- Row6: Port / Carrier -->
+    <!-- Port / Carrier -->
     <tr>
-      <td style="padding:5px 7px;vertical-align:top;">
+      <td>
         <table style="width:100%;border-collapse:collapse;">
           <tr>
-            <td style="width:50%;border-right:1px solid #ccc;padding-right:6px;vertical-align:top;">
+            <td style="width:50%;border-right:1px solid #ccc;padding-right:5px;vertical-align:top;">
               <div class="hdr">Port of loading</div>
               <div class="val">${portLoading}</div>
             </td>
-            <td style="padding-left:6px;vertical-align:top;">
+            <td style="padding-left:5px;vertical-align:top;">
               <div class="hdr">Final destination</div>
               <div class="val">${finalDest}</div>
             </td>
           </tr>
           <tr>
-            <td colspan="2" style="padding-top:4px;border-top:1px solid #ccc;">
+            <td colspan="2" style="padding-top:4px;border-top:1px solid #ccc;vertical-align:top;">
               <div class="hdr">Carrier</div>
-              <div class="val">${carrier}${sailingDate ? " &nbsp;|&nbsp; Sailing on or about: "+sailingDate : ""}</div>
+              <div class="val">${carrier}${sailingDate ? " &nbsp;&nbsp; Sailing on or about: "+sailingDate : ""}</div>
             </td>
           </tr>
         </table>
@@ -221,46 +222,46 @@ body{
   </tbody>
 </table>
 
-<!-- 품목 테이블 -->
-<table class="item-tbl" style="margin-top:0;">
-  <thead>
-    <tr>
-      <th style="width:32%">
-        <div>Marks/No.of PKGS.</div>
-        <div style="font-weight:400;font-size:7px;">${marks}</div>
-        ${hsCodes.length>0 ? `<div style="margin-top:3px;font-weight:700;">HS CODE:</div>${hsCodes.map(h=>`<div style="font-weight:400;font-size:7px;">${h}</div>`).join("")}` : ""}
-      </th>
-      <th style="width:36%;text-align:left;padding:4px 5px;">Description</th>
-      <th style="width:12%">Quantity</th>
-      <th style="width:10%">Unit Price(USD)</th>
-      <th style="width:10%">Total Price(USD)</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${items.map((item,idx) => {
-      const usd   = item.unitPriceUSD ?? item.unitPrice ?? 0;
-      const total = item.amountUSD   ?? item.amount    ?? 0;
-      const qty   = item.qty ?? 1;
-      const details = (item.details||[]).map(d=>`<div style="font-size:7px;color:#555;margin-top:1px;">- ${d}</div>`).join("");
-      return `<tr>
-        <td style="vertical-align:top;padding:6px 5px;"></td>
-        <td style="vertical-align:top;padding:6px 5px;">
-          <div style="font-weight:700;font-size:8px;">${item.category||""}</div>
-          <div style="font-size:8px;margin-top:1px;">${item.spec||""}</div>
-          ${details}
-        </td>
-        <td style="text-align:center;vertical-align:top;padding:6px 5px;font-size:8px;">${qty} PCS</td>
-        <td style="text-align:right;vertical-align:top;padding:6px 5px;font-size:8px;">${fmtUSD(usd)}</td>
-        <td style="text-align:right;vertical-align:top;padding:6px 5px;font-size:8px;font-weight:700;">${fmtUSD(total)}</td>
-      </tr>`;
-    }).join("")}
-    <!-- 여백 행 -->
-    <tr><td colspan="5" style="height:20px;border:none;"></td></tr>
-  </tbody>
-</table>
+<!-- 품목 영역: 테이블 없이 grid 레이아웃 -->
+<div class="item-area">
+  <!-- 헤더 -->
+  <div class="item-hdr">
+    <div>Marks/No.of PKGS.</div>
+    <div>Description</div>
+    <div>Quantity</div>
+    <div>Unit Price(USD)</div>
+    <div>Total Price(USD)</div>
+  </div>
 
-<!-- Freight 안내 (원본에 있는 경우) -->
-<div style="text-align:center;font-style:italic;color:#B45309;font-weight:700;font-size:8px;margin:6px 0;">
+  <!-- 품목 행들 -->
+  ${items.map(item => {
+    const usd   = item.unitPriceUSD ?? item.unitPrice ?? 0;
+    const total = item.amountUSD   ?? item.amount    ?? 0;
+    const qty   = item.qty ?? 1;
+    const details = (item.details||[]).map(d=>`<div style="font-size:7px;color:#555;margin-top:1px;">- ${d}</div>`).join("");
+    return `
+  <div class="item-row">
+    <div>
+      <div style="font-size:7.5px;">${marks}</div>
+      ${hsCodes.length>0 ? `<div style="font-size:7px;margin-top:3px;font-weight:700;">HS CODE:</div>${hsCodes.map(h=>`<div style="font-size:7px;">${h}</div>`).join("")}` : ""}
+    </div>
+    <div>
+      <div style="font-weight:700;">${item.category||""}</div>
+      <div style="margin-top:1px;">${item.spec||""}</div>
+      ${details}
+    </div>
+    <div style="text-align:center;">${qty} PCS</div>
+    <div style="text-align:right;">${fmtUSD(usd)}</div>
+    <div style="text-align:right;font-weight:700;">${fmtUSD(total)}</div>
+  </div>`;
+  }).join("")}
+
+  <!-- 여백 -->
+  <div style="height:18px;border-bottom:1px solid #eee;"></div>
+</div>
+
+<!-- freight 안내 -->
+<div style="text-align:center;font-style:italic;color:#B45309;font-weight:700;font-size:8px;margin:4px 0 6px;">
   ***Please note that freight charges are subject to change.***
 </div>
 
