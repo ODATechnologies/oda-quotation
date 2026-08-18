@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage       from "./components/LoginPage";
 import QuotationPage   from "./components/QuotationPage";
@@ -78,7 +78,10 @@ function AppInner() {
           ))}
         </aside>
         <main className="content">
-          {page==="quote"     && <QuotationPage  showToast={showToast}/>}
+          {/* 견적서 작성은 항상 마운트 유지 (hide/show로 상태 보존) */}
+          <div style={{ display: page==="quote" ? "block" : "none" }}>
+            <QuotationPage showToast={showToast}/>
+          </div>
           {page==="dashboard" && <QuoteDashboard showToast={showToast}/>}
           {page==="staff"     && <StaffManager   showToast={showToast}/>}
           {page==="customer"  && <CustomerManager showToast={showToast}/>}

@@ -3,9 +3,14 @@ import { fmtNumber } from "../utils/helpers";
 import { deleteQuote } from "../utils/historyStore";
 import { exportToPdf } from "../utils/exportPdf";
 
-export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange }) {
+export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, loading }) {
   const [popup, setPopup] = useState(null); // 선택된 record
 
+  if (loading) return (
+    <div style={{ marginTop:12, padding:"10px 0", color:"var(--text-muted)", fontSize:12 }}>
+      이력 불러오는 중...
+    </div>
+  );
   if (!history || history.length === 0) return null;
 
   function handleDelete(e, docNo) {
