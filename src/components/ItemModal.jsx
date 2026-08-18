@@ -55,11 +55,19 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   }, []);
 
   function selectSpec(s) {
+    // 해외 모드이고 해외단가가 있으면 overseasPrice를 단가로 직접 사용
+    const useOverseas = isOverseas && s.overseasPrice != null;
     setForm(f => ({
       ...f,
-      category: s.catName, spec: s.spec, specId: s.specId,
-      listPrice: s.listPrice, dc: "", manualPrice: false,
-      unitPrice: s.listPrice, details: s.details,
+      category:     s.catName,
+      spec:         s.spec,
+      specId:       s.specId,
+      listPrice:    s.listPrice,
+      overseasPrice:s.overseasPrice || null,
+      dc:           useOverseas ? "" : "",
+      manualPrice:  useOverseas,          // 해외단가는 수기 단가처럼 고정
+      unitPrice:    useOverseas ? s.overseasPrice : s.listPrice,
+      details:      s.details,
     }));
     setSpecSearch(s.spec);
     setShowDrop(false);
@@ -181,8 +189,11 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                     </div>
                     <div style={{ textAlign:"right" }}>
                       <div style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>₩{fmtNumber(s.listPrice)}</div>
-                      {isOverseas && (
-                        <div style={{ fontSize:11, color:"#059669", marginTop:2 }}>{fmtUSD(toUSD(s.listPrice))}</div>
+                      {isOverseas && s.overseasPrice != null && (
+                        <div style={{ fontSize:12, color:"#059669", fontWeight:700, marginTop:2 }}>{fmtUSD(s.overseasPrice)}</div>
+                      )}
+                      {isOverseas && s.overseasPrice == null && (
+                        <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:2 }}>해외단가 미등록</div>
                       )}
                     </div>
                   </div>
@@ -216,7 +227,12 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                 onChange={e => { const v=e.target.value.replace(/,/g,""); set("listPrice",v); if(!form.manualPrice) set("unitPrice",v); }}
                 placeholder="0"
                 style={{ ...inputStyle, textAlign:"right" }}/>
-              <DualPrice krw={Number(form.listPrice)||0} />
+              {!isOverseas && <DualPrice krw={Number(form.listPrice)||0} />}
+              {isOverseas && form.overseasPrice != null && (
+                <div style={{marginTop:4,fontSize:12,color:"#059669",fontWeight:600}}>
+                  해외단가: {fmtUSD(form.overseasPrice)}
+                </div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>DC율 (%)</label>
@@ -251,7 +267,15 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                   color: form.manualPrice ? "var(--accent)" : form.dc ? "var(--success)" : "inherit",
                   fontWeight: form.manualPrice || form.dc ? 600 : 400,
                 }}/>
-              <DualPrice krw={calc.unitPrice} />
+              {!isOverseas && <DualPrice krw={calc.unitPrice} />}
+              {isOverseas && (
+                <div style={{marginTop:4,display:"flex",alignItems:"center",gap:8}}>
+                  <span style={{fontSize:13,fontWeight:700,color:"#059669"}}>
+                    {fmtUSD(Number(calc.unitPrice))}
+                  </span>
+                  <span style={{fontSize:11,color:"var(--text-muted)"}}>USD (직접 적용)</span>
+                </div>
+              )}
             </div>
             <div>
               <label style={labelStyle}>비고</label>
@@ -266,16 +290,14 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
             borderRadius:10, padding:"16px 20px", color:"#fff",
           }}>
             {isOverseas ? (
-              /* 해외: KRW + USD 동시 표시 */
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:0 }}>
-                <div style={{ textAlign:"center", borderRight:"1px solid rgba(255,255,255,.2)", paddingRight:16 }}>
-                  <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>금액 (KRW)</div>
-                  <div style={{ fontSize:15, fontWeight:700 }}>₩{fmtNumber(calc.amount)}</div>
+              /* 해외: USD 직접 표시 */
+              <div style={{ textAlign:"center" }}>
+                <div style={{ fontSize:11, opacity:.7, marginBottom:6 }}>금액 (USD)</div>
+                <div style={{ fontSize:22, fontWeight:800, color:"#86EFAC" }}>
+                  {fmtUSD(Number(calc.amount) * Number(form.qty || 1) / Number(form.qty || 1))}
                 </div>
-                <div style={{ textAlign:"center", paddingLeft:16 }}>
-                  <div style={{ fontSize:11, opacity:.7, marginBottom:4 }}>금액 (USD)</div>
-                  <div style={{ fontSize:18, fontWeight:800, color:"#86EFAC" }}>{fmtUSD(toUSD(calc.amount))}</div>
-                  <div style={{ fontSize:10, opacity:.6, marginTop:2 }}>₩{fmtNumber(rate)} = $1</div>
+                <div style={{ fontSize:11, opacity:.6, marginTop:4 }}>
+                  단가 {fmtUSD(Number(calc.unitPrice))} × {form.qty || 1}개
                 </div>
               </div>
             ) : (

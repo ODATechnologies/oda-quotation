@@ -98,21 +98,25 @@ export default function QuotationPage({ showToast }) {
   // 계산된 품목
   const calcedItems = useMemo(() => items.map(item => {
     const base = calcItem(item);
-    if (mode === "overseas" && exchangeRate) {
-      const rate = Number(exchangeRate) || 1;
+    if (mode === "overseas") {
+      // 해외: unitPrice(=overseasPrice USD)를 그대로 사용
+      const unitUSD  = Number(base.unitPrice) || 0;
+      const amtUSD   = unitUSD * (Number(item.qty) || 1);
       return {
         ...base,
-        unitPriceUSD: Math.round((base.unitPrice / rate) * 100) / 100,
-        amountUSD:    Math.round((base.amount    / rate) * 100) / 100,
+        amount:       amtUSD,  // 해외는 amount도 USD
+        vat:          0,       // 해외는 VAT 없음
+        unitPriceUSD: unitUSD,
+        amountUSD:    amtUSD,
       };
     }
     return base;
-  }), [items, mode, exchangeRate]);
+  }), [items, mode]);
 
   const totalSupply = calcedItems.reduce((s,i) => s + i.amount, 0);
   const totalVat    = calcedItems.reduce((s,i) => s + (i.vat||0), 0);
   const grandTotal  = totalSupply + totalVat;
-  const totalUSD    = calcedItems.reduce((s,i) => s + (i.amountUSD||0), 0);
+  const totalUSD    = mode === "overseas" ? calcedItems.reduce((s,i) => s + (i.amountUSD||0), 0) : 0;
 
   function handleItemSave(savedItem) {
     if (itemModal.mode === "add") {
@@ -234,17 +238,11 @@ export default function QuotationPage({ showToast }) {
 
       {/* 해외 모드: 환율 입력 */}
       {isOverseas && (
-        <div style={{ background:"#EEF3FF", border:"1px solid #C7D7FD", borderRadius:8, padding:"10px 16px", marginBottom:14, display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ fontSize:13, fontWeight:600, color:"#1E3C78" }}>🌐 해외 견적 모드</span>
-          <span style={{ fontSize:12, color:"#4B5563" }}>환율 (₩/USD)</span>
-          <input
-            type="number"
-            value={exchangeRate}
-            onChange={e => setExchangeRate(e.target.value)}
-            style={{ width:100, padding:"5px 10px", border:"1px solid #C7D7FD", borderRadius:6, fontSize:13, textAlign:"right" }}
-          />
-          <span style={{ fontSize:12, color:"#4B5563" }}>원 = $1</span>
-          <span style={{ fontSize:11, color:"#6B7280", marginLeft:8 }}>공급자: {SUPPLIER_INFO_OVERSEAS.name} · VAT 미적용</span>
+        <div style={{ background:"#EEF3FF", border:"1px solid #C7D7FD", borderRadius:8, padding:"10px 16px", marginBottom:14, display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+          <span style={{ fontSize:13, fontWeight:700, color:"#1E3C78" }}>🌐 해외 견적 모드</span>
+          <span style={{ fontSize:12, color:"#4B5563" }}>· 공급자: <strong>{SUPPLIER_INFO_OVERSEAS.name}</strong></span>
+          <span style={{ fontSize:12, color:"#4B5563" }}>· VAT 미적용</span>
+          <span style={{ fontSize:12, color:"#059669", fontWeight:600 }}>· 품목별 해외단가(USD) 직접 적용</span>
         </div>
       )}
 

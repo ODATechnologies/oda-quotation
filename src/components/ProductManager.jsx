@@ -103,10 +103,11 @@ export default function ProductManager({ showToast }) {
         dataRows.forEach(r => {
           const catName = String(r[0]).trim();
           const spec    = String(r[1]).trim();
-          const price   = Number(String(r[2]).replace(/,/g,"")) || 0;
-          const details = [r[3],r[4],r[5],r[6],r[7]].map(d=>String(d).trim()).filter(Boolean);
+          const price        = Number(String(r[2]).replace(/,/g,"")) || 0;
+          const overseasPrice= r[3] !== "" ? Number(String(r[3]).replace(/,/g,"")) : null;
+          const details = [r[4],r[5],r[6],r[7],r[8]].map(d=>String(d).trim()).filter(Boolean);
           if (!catMap[catName]) catMap[catName] = [];
-          catMap[catName].push({ id:`spec_${Date.now()}_${Math.random().toString(36).slice(2)}`, spec, listPrice:price, details });
+          catMap[catName].push({ id:`spec_${Date.now()}_${Math.random().toString(36).slice(2)}`, spec, listPrice:price, overseasPrice, details });
         });
         const fn = tab === "shared" ? saveShared : saveMy;
         const existing = tab === "shared" ? sharedItems : myItems;
@@ -202,7 +203,7 @@ export default function ProductManager({ showToast }) {
                 <p style={{ color:"var(--text-muted)", fontSize:13 }}>등록된 규격이 없습니다.</p>
               ) : (
                 <table style={{ width:"100%" }}>
-                  <thead><tr><th>규격</th><th>소비자가</th><th>상세 사양</th><th style={{width:90}}>관리</th></tr></thead>
+                  <thead><tr><th>규격</th><th>소비자가 (KRW)</th><th>해외단가 (USD)</th><th>상세 사양</th><th style={{width:90}}>관리</th></tr></thead>
                   <tbody>
                     {(cat.specs||[]).filter(s =>
                       !search.trim() ||
@@ -212,6 +213,9 @@ export default function ProductManager({ showToast }) {
                       <tr key={s.id}>
                         <td style={{ fontWeight:700 }}>{s.spec}</td>
                         <td style={{ textAlign:"right" }}>₩{fmtNumber(s.listPrice)}</td>
+                        <td style={{ textAlign:"right", color:"#059669", fontWeight:600 }}>
+                          {s.overseasPrice ? `$${Number(s.overseasPrice).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}` : <span style={{color:"var(--text-muted)",fontWeight:400}}>-</span>}
+                        </td>
                         <td><div style={{ display:"flex", flexWrap:"wrap", gap:2 }}>
                           {(s.details||[]).map((d,i) => <span key={i} className="detail-tag">{d}</span>)}
                         </div></td>
@@ -273,23 +277,58 @@ function CategoryForm({ onSave, onClose }) {
   </>);
 }
 function SpecForm({ initial, onSave, onClose }) {
-  const [spec,       setSpec]       = useState(initial.spec || "");
-  const [listPrice,  setListPrice]  = useState(initial.listPrice || "");
-  const [detailsText,setDetailsText]= useState((initial.details||[]).join("\n"));
+  const [spec,          setSpec]         = useState(initial.spec || "");
+  const [listPrice,     setListPrice]    = useState(initial.listPrice || "");
+  const [overseasPrice, setOverseasPrice]= useState(initial.overseasPrice || "");
+  const [detailsText,   setDetailsText]  = useState((initial.details||[]).join("\n"));
+
   function handleSave() {
     const details = detailsText.split("\n").map(s=>s.trim()).filter(Boolean);
-    onSave({ spec, listPrice: Number(String(listPrice).replace(/,/g,"")), details });
+    onSave({
+      spec,
+      listPrice:     Number(String(listPrice).replace(/,/g,"")),
+      overseasPrice: overseasPrice !== "" ? Number(String(overseasPrice).replace(/,/g,"")) : null,
+      details,
+    });
   }
+
+  const fmtKRW = (v) => v !== "" ? Number(String(v).replace(/,/g,"")).toLocaleString("ko-KR") : "";
+  const fmtOverseas = (v) => {
+    if (v === "" || v === null || v === undefined) return "";
+    const n = Number(String(v).replace(/,/g,""));
+    return isNaN(n) ? "" : n.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2});
+  };
+
   return (<>
     <div className="form-grid" style={{gap:12}}>
-      <div className="form-group"><label>규격명</label>
+      <div className="form-group" style={{gridColumn:"1 / -1"}}>
+        <label>규격명</label>
         <input value={spec} onChange={e=>setSpec(e.target.value)} placeholder="예: EX80-22.5" autoFocus/>
       </div>
-      <div className="form-group"><label>소비자가 (원)</label>
-        <input value={listPrice !== "" ? Number(String(listPrice).replace(/,/g,"")).toLocaleString("ko-KR") : ""}
-          onChange={e=>setListPrice(e.target.value.replace(/,/g,""))} placeholder="100,000,000"/>
+      <div className="form-group">
+        <label>소비자가 (KRW, 원)</label>
+        <input value={fmtKRW(listPrice)}
+          onChange={e=>setListPrice(e.target.value.replace(/,/g,""))}
+          placeholder="100,000,000"
+          style={{textAlign:"right"}}/>
+        <div style={{fontSize:11,color:"var(--text-muted)",marginTop:3}}>국내 견적 시 사용</div>
       </div>
-      <div className="form-group" style={{gridColumn:"1 / -1"}}><label>상세 사양 (줄바꿈으로 구분)</label>
+      <div className="form-group">
+        <label style={{display:"flex",alignItems:"center",gap:6}}>
+          해외단가 (USD, $)
+          <span style={{fontSize:10,background:"#ECFDF5",color:"#059669",padding:"1px 6px",borderRadius:10,fontWeight:600}}>해외 견적 전용</span>
+        </label>
+        <div style={{position:"relative"}}>
+          <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"#059669",fontWeight:700,fontSize:14}}>$</span>
+          <input value={fmtOverseas(overseasPrice)}
+            onChange={e=>setOverseasPrice(e.target.value.replace(/,/g,""))}
+            placeholder="0.00"
+            style={{textAlign:"right",paddingLeft:22}}/>
+        </div>
+        <div style={{fontSize:11,color:"var(--text-muted)",marginTop:3}}>해외 견적 시 환율 변환 없이 직접 적용</div>
+      </div>
+      <div className="form-group" style={{gridColumn:"1 / -1"}}>
+        <label>상세 사양 (줄바꿈으로 구분)</label>
         <textarea rows={5} value={detailsText} onChange={e=>setDetailsText(e.target.value)}
           placeholder={"DC Output : 0~80V / 0~22.5A 1Channel\nDisplay Resolution : 4 Digit"}/>
       </div>
