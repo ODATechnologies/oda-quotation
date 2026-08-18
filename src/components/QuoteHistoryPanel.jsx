@@ -13,10 +13,11 @@ export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, lo
   );
   if (!history || history.length === 0) return null;
 
-  function handleDelete(e, docNo) {
+  async function handleDelete(e, docNo) {
     e.stopPropagation();
     if (!confirm(`[${docNo}] 견적 이력을 삭제하시겠습니까?`)) return;
-    onHistoryChange(deleteQuote(docNo));
+    await deleteQuote(docNo);
+    onHistoryChange();
   }
 
   function handleLoad() {

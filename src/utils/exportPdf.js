@@ -29,6 +29,8 @@ body{
   body{padding:32px 34px;}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
 }
+
+/* 상단 */
 .top-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;flex-shrink:0;}
 .logo-wrap img{height:36px;object-fit:contain;display:block;}
 .title-block{text-align:right;}
@@ -44,7 +46,7 @@ body{
 .info-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:62px;width:62px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
 .info-value{padding:3.5px 6px;font-size:7.5px;color:#111;display:flex;align-items:center;flex:1;}
 
-/* 품목 */
+/* 품목 테이블 */
 .item-table{width:100%;border-collapse:collapse;font-size:8px;flex-shrink:0;}
 .item-table thead tr{background:${ODA};}
 .item-table th{color:#fff;padding:5.5px 4px;text-align:center;font-size:7px;font-weight:700;border-right:1px solid rgba(255,255,255,.3);white-space:nowrap;}
@@ -57,37 +59,77 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 
 .spacer{flex:1;min-height:60px;max-height:120px;}
 
-/* ── TERMS & 합계: table 방식으로 완전 교체 ── */
-.bottom-table{width:100%;border-collapse:collapse;flex-shrink:0;}
-.bottom-table td{vertical-align:top;width:50%;padding:0;}
-.bottom-table td+td{padding-left:8px;}
-
-/* TERMS */
-.terms-box{border:1px solid #ccc;border-collapse:collapse;width:100%;}
-.terms-box .t-hdr{
-  background:${DARK};color:#fff;
-  font-size:7px;font-weight:700;letter-spacing:.08em;
-  padding:3.5px 7px;
+/* ── TERMS + 합계: 완전한 table 레이아웃 ── */
+.bottom-wrap{flex-shrink:0;width:100%;}
+.bottom-wrap table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:8px 0;
+  table-layout:fixed;
 }
-.terms-box .t-row{display:flex;border-top:1px solid #e0e0e0;}
-.terms-box .t-label{background:#f4f4f4;font-size:7px;font-weight:700;color:#555;padding:3.5px 6px;min-width:54px;width:54px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
-.terms-box .t-val{padding:3.5px 6px;font-size:7.5px;flex:1;display:flex;align-items:center;}
+.bottom-wrap table td{
+  width:50%;
+  vertical-align:top;
+  padding:0;
+}
 
-/* 합계 */
-.amt-box{border:1px solid #ccc;width:100%;}
-.amt-box .a-row{display:flex;justify-content:space-between;align-items:center;padding:5px 9px;border-bottom:1px solid #e0e0e0;font-size:8px;}
-.amt-box .a-row.last{border-bottom:none;}
-.amt-box .a-total{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:7px 9px;
+/* TERMS 박스 — table 내부를 또 table로 구성 */
+.terms-table{
+  width:100%;
+  border-collapse:collapse;
+  border:1px solid #ccc;
+}
+.terms-table .terms-hdr{
+  background:${DARK};
+  color:#fff;
+  font-size:7px;
+  font-weight:700;
+  padding:3.5px 7px;
+  letter-spacing:.08em;
+}
+.terms-table .terms-row td{
+  border-top:1px solid #e0e0e0;
+  padding:3.5px 6px;
+  font-size:7.5px;
+}
+.terms-table .terms-row td:first-child{
+  background:#f4f4f4;
+  font-weight:700;
+  font-size:7px;
+  color:#555;
+  width:54px;
+  border-right:1px solid #e0e0e0;
+}
+
+/* 합계 박스 */
+.amt-table{
+  width:100%;
+  border-collapse:collapse;
+  border:1px solid #ccc;
+}
+.amt-table tr td{
+  padding:5px 9px;
+  font-size:8px;
+  border-bottom:1px solid #e0e0e0;
+}
+.amt-table tr:last-child td{ border-bottom:none; }
+.amt-table .amt-label{ text-align:left; }
+.amt-table .amt-value{ text-align:right; }
+.amt-table .total-row td{
   background:${ODA};
-  color:#fff;font-weight:800;font-size:10.5px;
+  color:#fff;
+  font-weight:800;
+  font-size:10.5px;
+  padding:7px 9px;
+  border-bottom:none;
 }
 
 .footer{margin-top:10px;text-align:center;color:#bbb;font-size:6.5px;border-top:1px solid #eee;padding-top:6px;flex-shrink:0;}
 </style>
 </head>
 <body>
+
+<!-- 헤더 -->
 <div class="top-header">
   <div class="logo-wrap"><img src="${logoSrc}" alt="ODA Technologies"/></div>
   <div class="title-block">
@@ -97,6 +139,7 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 </div>
 <div class="orange-bar"></div>
 
+<!-- INFO -->
 <div class="info-wrap">
   <div class="info-box">
     <div class="info-title">CUSTOMER</div>
@@ -115,6 +158,7 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
   </div>
 </div>
 
+<!-- 품목 -->
 <table class="item-table">
   <thead>
     <tr>
@@ -147,35 +191,43 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 
 <div class="spacer"></div>
 
-<!-- TERMS & 합계: table로 나란히 배치 (색상 문제 완전 해결) -->
-<table class="bottom-table">
-  <tr>
-    <td>
-      <div class="terms-box">
-        <div class="t-hdr">TERMS &amp; CONDITIONS</div>
-        <div class="t-row"><div class="t-label">Delivery</div><div class="t-val">${terms.delivery||''}</div></div>
-        <div class="t-row"><div class="t-label">Validity</div><div class="t-val">${terms.validity||''}</div></div>
-        <div class="t-row"><div class="t-label">Payment</div><div class="t-val">${terms.payment||''}</div></div>
-      </div>
-    </td>
-    <td>
-      <div class="amt-box">
-        <div class="a-row"><span>Supply Amount</span><span>₩ ${fmtNumber(totalSupply)}</span></div>
-        <div class="a-row last"><span>VAT (10%)</span><span>₩ ${fmtNumber(totalVat)}</span></div>
-        <div class="a-total"><span>TOTAL</span><span>₩ ${fmtNumber(grandTotal)}</span></div>
-      </div>
-    </td>
-  </tr>
-</table>
+<!-- TERMS & 합계: 완전한 table-in-table 방식 -->
+<div class="bottom-wrap">
+  <table>
+    <tr>
+      <!-- TERMS -->
+      <td>
+        <table class="terms-table">
+          <tr><td colspan="2" class="terms-hdr">TERMS &amp; CONDITIONS</td></tr>
+          <tr class="terms-row"><td>Delivery</td><td>${terms.delivery||''}</td></tr>
+          <tr class="terms-row"><td>Validity</td><td>${terms.validity||''}</td></tr>
+          <tr class="terms-row"><td>Payment</td><td>${terms.payment||''}</td></tr>
+        </table>
+      </td>
+      <!-- 합계 -->
+      <td>
+        <table class="amt-table">
+          <tr><td class="amt-label">Supply Amount</td><td class="amt-value">₩ ${fmtNumber(totalSupply)}</td></tr>
+          <tr><td class="amt-label">VAT (10%)</td><td class="amt-value">₩ ${fmtNumber(totalVat)}</td></tr>
+          <tr class="total-row"><td class="amt-label">TOTAL</td><td class="amt-value">₩ ${fmtNumber(grandTotal)}</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
 
 <div class="footer">
   We hereby submit our quotation as above. &nbsp;|&nbsp;
   Date: ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})} &nbsp;|&nbsp;
   ODA Technologies Co., Ltd.
 </div>
+
 <script>
 document.fonts.ready.then(function(){
-  setTimeout(function(){ window.print(); window.onafterprint=function(){window.close();}; }, 400);
+  setTimeout(function(){
+    window.print();
+    window.onafterprint = function(){ window.close(); };
+  }, 400);
 });
 <\/script>
 </body></html>`;
