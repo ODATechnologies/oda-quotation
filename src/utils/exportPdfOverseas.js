@@ -82,7 +82,7 @@ body{
 .item-area{width:100%;margin-bottom:6px;}
 .item-hdr{
   display:grid;
-  grid-template-columns:28% 36% 12% 12% 12%;
+  grid-template-columns:18% 36% 10% 12% 12% 12%;
   border-top:1px solid #999;
   border-bottom:1px solid #999;
   padding:5px 0;
@@ -228,6 +228,7 @@ body{
     <div>Quantity</div>
     <div>Unit Price(USD)</div>
     <div>Total Price(USD)</div>
+    <div>Remark</div>
   </div>
 
   <!-- 품목 행들: Marks/HS Code는 첫 행에만 1회 표시 -->
@@ -255,6 +256,7 @@ body{
     <div style="text-align:center;">${qty} PCS</div>
     <div style="text-align:right;">${fmtUSD(usd)}</div>
     <div style="text-align:right;font-weight:700;">${fmtUSD(total)}</div>
+    <div style="text-align:left;padding-left:4px;">${item.note||""}</div>
   </div>`;
   }).join("")}
 
