@@ -47,7 +47,7 @@ body{
 .info-value{padding:4px 7px;font-size:10px;color:#111;display:flex;align-items:center;flex:1;}
 
 /* 품목 테이블 */
-.item-table{width:100%;border-collapse:collapse;font-size:10px;flex-shrink:0;}
+.item-table{width:100%;border-collapse:collapse;font-size:9px;flex-shrink:0;}
 .item-table thead tr{background:${ODA};}
 .item-table th{color:#fff;padding:6px 5px;text-align:center;font-size:9px;font-weight:700;border-right:1px solid rgba(255,255,255,.3);white-space:nowrap;}
 .item-table th:last-child{border-right:none;}
