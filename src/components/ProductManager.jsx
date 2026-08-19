@@ -76,11 +76,11 @@ export default function ProductManager({ showToast }) {
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const wsData = [
-      ["카테고리명", "규격명", "소비자가(원)", "상세사양1", "상세사양2", "상세사양3", "상세사양4", "상세사양5"],
-      ["Programmable DC Power Supply", "EX80-22.5", 100000000, "DC Output : 0~80V / 0~22.5A 1Channel", "Display Resolution : 4 Digit", "AC Input : 220V / 60Hz", "RS-232C, RS-485 통신 기본장착", ""],
+      ["카테고리명", "규격명", "소비자가(원)", "해외단가(USD)", "상세사양1", "상세사양2", "상세사양3", "상세사양4", "상세사양5"],
+      ["Programmable DC Power Supply", "EX80-22.5", 100000000, 4818.00, "DC Output : 0~80V / 0~22.5A 1Channel", "Display Resolution : 4 Digit", "AC Input : 220V / 60Hz", "RS-232C, RS-485 통신 기본장착", ""],
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws["!cols"] = [{wch:32},{wch:24},{wch:16},{wch:36},{wch:36},{wch:36},{wch:36},{wch:36}];
+    ws["!cols"] = [{wch:32},{wch:24},{wch:16},{wch:16},{wch:36},{wch:36},{wch:36},{wch:36},{wch:36}];
     XLSX.utils.book_append_sheet(wb, ws, "품목목록");
     XLSX.writeFile(wb, "ODA_품목목록_양식.xlsx");
     showToast("양식 파일이 다운로드되었습니다.", "success");

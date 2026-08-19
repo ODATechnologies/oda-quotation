@@ -69,9 +69,7 @@ body{
 }
 
 /* 타이틀 */
-.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.top .logo{height:20px;object-fit:contain;}
-.top .title{font-size:20px;font-weight:700;letter-spacing:2px;color:#111;text-align:center;flex:1;}
+
 
 .hdr{font-weight:700;font-size:7.5px;text-decoration:underline;}
 .val{font-size:8px;}
@@ -129,18 +127,17 @@ body{
 </head>
 <body>
 
-<!-- 타이틀 -->
-<div class="top">
-  <div style="width:20px;"></div>
-  <div class="title">QUOTATION</div>
-  <img src="${logoSrc}" class="logo" alt="ODA"/>
+<!-- 타이틀: QUOTATION은 A4 전체 기준 정중앙 -->
+<div style="position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+  <div style="font-size:20px;font-weight:700;letter-spacing:2px;color:#111;text-align:center;">QUOTATION</div>
+  <img src="${logoSrc}" style="height:20px;object-fit:contain;position:absolute;right:0;" alt="ODA"/>
 </div>
 
 <!-- 상단 정보 테이블 (6:4) -->
 <table class="main-tbl">
   <colgroup>
-    <col style="width:60%"/>
-    <col style="width:40%"/>
+    <col style="width:50%"/>
+    <col style="width:50%"/>
   </colgroup>
   <tbody>
     <tr>
@@ -233,8 +230,8 @@ body{
     <div>Total Price(USD)</div>
   </div>
 
-  <!-- 품목 행들 -->
-  ${items.map(item => {
+  <!-- 품목 행들: Marks/HS Code는 첫 행에만 1회 표시 -->
+  ${items.map((item, idx) => {
     const usd   = item.unitPriceUSD ?? item.unitPrice ?? 0;
     const total = item.amountUSD   ?? item.amount    ?? 0;
     const qty   = item.qty ?? 1;
@@ -242,8 +239,13 @@ body{
     return `
   <div class="item-row">
     <div>
-      <div style="font-size:7.5px;">${marks}</div>
-      ${hsCodes.length>0 ? `<div style="font-size:7px;margin-top:3px;font-weight:700;">HS CODE:</div>${hsCodes.map(h=>`<div style="font-size:7px;">${h}</div>`).join("")}` : ""}
+      ${idx === 0 ? `
+        <div style="font-size:7.5px;font-weight:700;">${marks}</div>
+        ${hsCodes.length > 0 ? `
+          <div style="font-size:7px;margin-top:4px;font-weight:700;">HS CODE :</div>
+          <div style="font-size:7px;">${hsCodes[0]}</div>
+        ` : ""}
+      ` : ""}
     </div>
     <div>
       <div style="font-weight:700;">${item.category||""}</div>
