@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { getAllHistory, deleteQuote } from "../utils/historyStore";
-import { exportToPdf } from "../utils/exportPdf";
+import { exportToPdf }         from "../utils/exportPdf";
+import { exportToPdfOverseas } from "../utils/exportPdfOverseas";
 import { fmtNumber } from "../utils/helpers";
 
 export default function QuoteDashboard({ showToast }) {
@@ -174,7 +175,7 @@ export default function QuoteDashboard({ showToast }) {
                           <td>
                             <div style={{ display:"flex", gap:4 }}>
                               <button className="btn btn-secondary btn-sm"
-                                onClick={() => exportToPdf(h)}>
+                                onClick={() => h.mode === "overseas" ? exportToPdfOverseas(h) : exportToPdf(h)}>
                                 🖨️
                               </button>
                               <button className="btn btn-ghost btn-sm"
