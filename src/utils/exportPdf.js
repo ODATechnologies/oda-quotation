@@ -32,7 +32,7 @@ body{
 
 /* 상단 */
 .top-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;flex-shrink:0;}
-.logo-wrap img{height:42px;object-fit:contain;display:block;}
+.logo-wrap img{height:32px;object-fit:contain;display:block;}
 .title-block{text-align:right;}
 .quotation-title{font-size:24px;font-weight:800;letter-spacing:7px;color:#111;display:block;line-height:1;}
 .subtitle{font-size:8px;letter-spacing:2.5px;color:#aaa;margin-top:3px;display:block;text-transform:uppercase;}
