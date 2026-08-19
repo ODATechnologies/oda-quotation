@@ -231,14 +231,13 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                 <input type="number" min="0" max="99" value={form.dc}
                   onChange={e => { set("dc", e.target.value); set("manualPrice", false); }}
                   placeholder="65"
-                  disabled={form.manualPrice || isOverseas}
-                  style={{ ...inputStyle, textAlign:"center", opacity: isOverseas ? .4 : 1 }}/>
+                  disabled={form.manualPrice}
+                  style={{ ...inputStyle, textAlign:"center" }}/>
                 <span style={{ fontSize:13, color:"var(--text-muted)", whiteSpace:"nowrap" }}>%</span>
               </div>
-              {form.dc && !form.manualPrice && !isOverseas && (
+              {form.dc && !form.manualPrice && (
                 <div style={{ fontSize:11, color:"var(--success)", marginTop:4, fontWeight:600 }}>×{((100-Number(form.dc))/100).toFixed(2)} 적용</div>
               )}
-              {isOverseas && <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:4 }}>해외 견적 미적용</div>}
             </div>
           </div>
 
