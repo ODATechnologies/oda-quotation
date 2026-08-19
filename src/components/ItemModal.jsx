@@ -198,7 +198,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                   <div style={{ position:"relative" }}>
                     <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#059669", fontWeight:700, fontSize:14 }}>$</span>
                     <input
-                      type="number" min="0" step="0.01"
+                      type="number" step="0.01"
                       value={form.overseasPrice ?? ""}
                       onChange={e => {
                         const v = e.target.value;
@@ -218,7 +218,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                 // 국내: KRW 입력
                 <input
                   value={form.listPrice !== "" ? fmtNumber(form.listPrice) : ""}
-                  onChange={e => { const v=e.target.value.replace(/,/g,""); set("listPrice",v); if(!form.manualPrice) set("unitPrice",v); }}
+                  onChange={e => { const v=e.target.value.replace(/[^0-9.-]/g,""); set("listPrice",v); if(!form.manualPrice) set("unitPrice",v); }}
                   placeholder="0"
                   style={{ ...inputStyle, textAlign:"right" }}/>
               )}
@@ -254,7 +254,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                   <div style={{ position:"relative" }}>
                     <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#059669", fontWeight:700, fontSize:14 }}>$</span>
                     <input
-                      type="number" min="0" step="0.01"
+                      type="number" step="0.01"
                       value={form.unitPrice ?? ""}
                       onChange={e => { const v=e.target.value; set("unitPrice", v===""?"":Number(v)); set("overseasPrice", v===""?null:Number(v)); set("manualPrice",true); }}
                       placeholder="0.00"
