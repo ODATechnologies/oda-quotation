@@ -270,11 +270,18 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                   )}
                 </>
               ) : (
-                // 국내: KRW 단가
+                // 국내: KRW 단가 (마이너스 입력 허용)
                 <>
                   <input
-                    value={calc.unitPrice ? fmtNumber(calc.unitPrice) : ""}
-                    onChange={e => { const v=e.target.value.replace(/,/g,""); set("unitPrice",v); set("manualPrice",true); set("dc",""); }}
+                    value={form.manualPrice
+                      ? (form.unitPrice ?? "")
+                      : (calc.unitPrice ? fmtNumber(calc.unitPrice) : "")}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^0-9,.\-]/g, "");
+                      set("unitPrice", v);
+                      set("manualPrice", true);
+                      set("dc", "");
+                    }}
                     placeholder="단가를 직접 입력하거나 DC율로 자동 계산"
                     style={{ ...inputStyle, textAlign:"right",
                       color: form.manualPrice ? "var(--accent)" : form.dc ? "var(--success)" : "inherit",
