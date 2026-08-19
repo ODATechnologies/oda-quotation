@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { getAllHistory, deleteQuote } from "../utils/historyStore";
-import { exportToPdf }         from "../utils/exportPdf";
-import { exportToPdfOverseas } from "../utils/exportPdfOverseas";
+import { exportToPdf } from "../utils/exportPdf";
 import { fmtNumber } from "../utils/helpers";
 
 export default function QuoteDashboard({ showToast }) {
@@ -78,7 +77,7 @@ export default function QuoteDashboard({ showToast }) {
         {[
           ["전체 견적 건수", `${totalCount}건`, "#1E3C78"],
           ["업체 수",        `${Object.keys(grouped).length}개사`, "#F84F04"],
-          ["총 견적 금액",   `₩${fmtNumber(totalAmount)}`, "#059669"],
+          ["총 견적 금액",   `₩${fmtNumber(totalAmount)} (KRW)`, "#059669"],
         ].map(([label, value, color]) => (
           <div key={label} className="card" style={{ padding:"16px 20px" }}>
             <div style={{ fontSize:12, color:"var(--text-muted)", marginBottom:4 }}>{label}</div>
@@ -125,7 +124,11 @@ export default function QuoteDashboard({ showToast }) {
                 <span className="card-title">🏢 {cust}</span>
                 <span className="badge badge-blue">{quotes.length}건</span>
                 <span style={{ fontSize:13, color:"var(--text-sub)" }}>
-                  합계: <strong style={{color:"var(--primary)"}}>₩{fmtNumber(custTotal)}</strong>
+                  합계: <strong style={{color:"var(--primary)"}}>
+                  {quotes.every(q => q.mode === "overseas")
+                    ? `$${quotes.reduce((s,h)=>s+(Number(h.totalUSD)||0),0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`
+                    : `₩${fmtNumber(custTotal)}`}
+                </strong>
                 </span>
               </div>
               <span style={{ color:"var(--text-muted)" }}>{expanded===cust ? "▲" : "▼"}</span>
@@ -170,12 +173,14 @@ export default function QuoteDashboard({ showToast }) {
                             {(h.items||[]).length > 2 && ` 외 ${(h.items||[]).length-2}건`}
                           </td>
                           <td style={{ textAlign:"right", fontWeight:700, color:"var(--primary)" }}>
-                            ₩{fmtNumber(h.grandTotal)}
+                            {h.mode === "overseas"
+                              ? `$${Number(h.totalUSD||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`
+                              : `₩${fmtNumber(h.grandTotal)}`}
                           </td>
                           <td>
                             <div style={{ display:"flex", gap:4 }}>
                               <button className="btn btn-secondary btn-sm"
-                                onClick={() => h.mode === "overseas" ? exportToPdfOverseas(h) : exportToPdf(h)}>
+                                onClick={() => exportToPdf(h)}>
                                 🖨️
                               </button>
                               <button className="btn btn-ghost btn-sm"
