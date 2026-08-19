@@ -57,7 +57,7 @@ export function exportToPdfOverseas(data) {
 html,body{width:210mm;}
 body{
   font-family:'Arial','Noto Sans KR',sans-serif;
-  font-size:8.5px;color:#111;background:#fff;
+  font-size:10px;color:#111;background:#fff;
   padding:10mm 12mm;
   display:flex;flex-direction:column;
 }
@@ -71,8 +71,8 @@ body{
 /* 타이틀 */
 
 
-.hdr{font-weight:700;font-size:7.5px;text-decoration:underline;}
-.val{font-size:8px;}
+.hdr{font-weight:700;font-size:9px;text-decoration:underline;}
+.val{font-size:10px;}
 
 /* 상단 정보 테이블 */
 .main-tbl{width:100%;border-collapse:collapse;font-size:8px;margin-bottom:6px;}
@@ -85,8 +85,8 @@ body{
   grid-template-columns:28% 36% 12% 12% 12%;
   border-top:1px solid #999;
   border-bottom:1px solid #999;
-  padding:4px 0;
-  font-weight:700;font-size:8px;
+  padding:5px 0;
+  font-weight:700;font-size:10px;
 }
 .item-hdr > div{padding:0 4px;text-align:center;}
 .item-hdr > div:nth-child(2){text-align:left;}
@@ -94,8 +94,8 @@ body{
   display:grid;
   grid-template-columns:28% 36% 12% 12% 12%;
   border-bottom:1px solid #eee;
-  padding:5px 0;
-  font-size:8px;
+  padding:6px 0;
+  font-size:10px;
   align-items:start;
 }
 .item-row > div{padding:0 4px;}
@@ -107,30 +107,30 @@ body{
 .total-row{
   border-top:2px solid #333;
   display:flex;justify-content:space-between;
-  padding:5px 4px;font-weight:700;font-size:9px;
+  padding:6px 4px;font-weight:700;font-size:11px;
   margin-bottom:8px;
 }
 
 /* Conditions */
-.cond{font-size:8px;line-height:1.7;margin-bottom:8px;}
+.cond{font-size:10px;line-height:1.7;margin-bottom:8px;}
 .lead-hl{color:#B45309;font-weight:700;background:#FEF9C3;padding:0 2px;}
 
 /* 서명 */
 .sign-area{display:flex;justify-content:flex-end;align-items:flex-end;gap:16px;margin-top:6px;}
-.sign-label{font-size:8.5px;font-weight:700;white-space:nowrap;}
+.sign-label{font-size:10px;font-weight:700;white-space:nowrap;}
 .sign-block{text-align:right;}
-.sign-block .company1{font-size:12px;font-weight:700;font-style:italic;color:#1a3a6e;}
-.sign-block img{height:44px;object-fit:contain;display:block;margin:2px 0 2px auto;}
-.sign-block .company2{font-size:8.5px;font-style:italic;color:#1a3a6e;}
-.sign-block .president{font-size:8.5px;font-weight:700;font-style:italic;color:#1a3a6e;}
+.sign-block .company1{font-size:14px;font-weight:700;font-style:italic;color:#1a3a6e;}
+.sign-block img{height:52px;object-fit:contain;display:block;margin:2px 0 2px auto;}
+.sign-block .company2{font-size:10px;font-style:italic;color:#1a3a6e;}
+.sign-block .president{font-size:10px;font-weight:700;font-style:italic;color:#1a3a6e;}
 </style>
 </head>
 <body>
 
 <!-- 타이틀: QUOTATION은 A4 전체 기준 정중앙 -->
 <div style="position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
-  <div style="font-size:20px;font-weight:700;letter-spacing:2px;color:#111;text-align:center;">QUOTATION</div>
-  <img src="${logoSrc}" style="height:20px;object-fit:contain;position:absolute;right:0;" alt="ODA"/>
+  <div style="font-size:24px;font-weight:700;letter-spacing:2px;color:#111;text-align:center;">QUOTATION</div>
+  <img src="${logoSrc}" style="height:26px;object-fit:contain;position:absolute;right:0;" alt="ODA"/>
 </div>
 
 <!-- 상단 정보 테이블 (6:4) -->
@@ -235,15 +235,15 @@ body{
     const usd   = item.unitPriceUSD ?? item.unitPrice ?? 0;
     const total = item.amountUSD   ?? item.amount    ?? 0;
     const qty   = item.qty ?? 1;
-    const details = (item.details||[]).map(d=>`<div style="font-size:7px;color:#555;margin-top:1px;">- ${d}</div>`).join("");
+    const details = (item.details||[]).map(d=>`<div style="font-size:8.5px;color:#555;margin-top:1px;">- ${d}</div>`).join("");
     return `
   <div class="item-row">
     <div>
       ${idx === 0 ? `
-        <div style="font-size:7.5px;font-weight:700;">${marks}</div>
+        <div style="font-size:9px;font-weight:700;">${marks}</div>
         ${hsCodes.length > 0 ? `
-          <div style="font-size:7px;margin-top:4px;font-weight:700;">HS CODE :</div>
-          <div style="font-size:7px;">${hsCodes[0]}</div>
+          <div style="font-size:9px;margin-top:4px;font-weight:700;">HS CODE :</div>
+          <div style="font-size:9px;">${hsCodes[0]}</div>
         ` : ""}
       ` : ""}
     </div>
