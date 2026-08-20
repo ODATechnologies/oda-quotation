@@ -82,26 +82,29 @@ body{
 .item-area{width:100%;margin-bottom:6px;}
 .item-hdr{
   display:grid;
-  grid-template-columns:18% 36% 10% 12% 12% 12%;
+  grid-template-columns:17% 35% 10% 12% 12% 14%;
   border-top:1px solid #999;
   border-bottom:1px solid #999;
-  padding:5px 0;
+  padding:5px 2px;
   font-weight:700;font-size:10px;
+  box-sizing:border-box;
 }
-.item-hdr > div{padding:0 4px;text-align:center;}
+.item-hdr > div{padding:0 3px;text-align:center;box-sizing:border-box;}
 .item-hdr > div:nth-child(2){text-align:left;}
 .item-row{
   display:grid;
-  grid-template-columns:28% 36% 12% 12% 12%;
+  grid-template-columns:17% 35% 10% 12% 12% 14%;
   border-bottom:1px solid #eee;
-  padding:6px 0;
+  padding:5px 2px;
   font-size:10px;
   align-items:start;
+  box-sizing:border-box;
 }
-.item-row > div{padding:0 4px;}
+.item-row > div{padding:0 3px;word-break:break-word;box-sizing:border-box;min-width:0;}
 .item-row > div:nth-child(3),
 .item-row > div:nth-child(4),
 .item-row > div:nth-child(5){text-align:right;}
+.item-row > div:nth-child(6){text-align:left;}
 
 /* TOTAL */
 .total-row{
