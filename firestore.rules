@@ -9,7 +9,12 @@ service cloud.firestore {
       allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // 담당자: 로그인 사용자 읽기, 쓰기 가능
+    // 거래처: 로그인 사용자 전체 공유
+    match /customers/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // 담당자: 로그인 사용자 전체 공유
     match /staff/{docId} {
       allow read, write: if request.auth != null;
     }

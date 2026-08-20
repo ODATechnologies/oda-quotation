@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
-import { INITIAL_CUSTOMERS, DEFAULT_TERMS, SUPPLIER_INFO, SUPPLIER_INFO_OVERSEAS } from "../data/masterData";
+import { DEFAULT_TERMS, SUPPLIER_INFO, SUPPLIER_INFO_OVERSEAS } from "../data/masterData";
 import { generateDocNo, fmtNumber, calcItem, emptyItem, todayStr } from "../utils/helpers";
 import { exportToExcel } from "../utils/exportExcel";
 import { exportToPdf }         from "../utils/exportPdf";
@@ -34,7 +34,15 @@ export default function QuotationPage({ showToast }) {
     return unsub;
   }, []);
 
-  const customerList = loadLS("oda_customers", INITIAL_CUSTOMERS);
+  const [customerList, setCustomerList] = useState([]);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "customers"), snap => {
+      const docs = snap.docs.map(d => ({ ...d.data(), id: d.id, _id: d.id }));
+      docs.sort((a,b) => (a.createdAt?.seconds||0)-(b.createdAt?.seconds||0));
+      setCustomerList(docs);
+    });
+    return unsub;
+  }, []);
   const [seqMap, setSeqMap] = useState(() => loadLS("oda_seq", {}));
 
   // ── 견적 모드: "domestic" | "overseas"
