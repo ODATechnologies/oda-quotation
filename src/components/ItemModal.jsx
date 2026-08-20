@@ -62,7 +62,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
       listPrice:    s.listPrice,
       overseasPrice:s.overseasPrice ?? null,
       dc:           "",
-      manualPrice:  hasOverseas,
+      manualPrice:  false,   // DC율 활성화 유지
       unitPrice:    hasOverseas ? s.overseasPrice : s.listPrice,
       details:      s.details,
     }));
@@ -229,9 +229,18 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
               <label style={labelStyle}>DC율 (%)</label>
               <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                 <input type="number" min="0" max="99" value={form.dc}
-                  onChange={e => { set("dc", e.target.value); set("manualPrice", false); }}
+                  onChange={e => {
+                    const dc = e.target.value;
+                    set("dc", dc);
+                    set("manualPrice", false);
+                    // 해외: overseasPrice 기반 DC 적용
+                    if (isOverseas && form.overseasPrice && dc !== "") {
+                      const discounted = Number(form.overseasPrice) * (1 - Number(dc)/100);
+                      set("unitPrice", Math.round(discounted * 100) / 100);
+                    }
+                  }}
                   placeholder="65"
-                  disabled={form.manualPrice}
+                  disabled={false}
                   style={{ ...inputStyle, textAlign:"center" }}/>
                 <span style={{ fontSize:13, color:"var(--text-muted)", whiteSpace:"nowrap" }}>%</span>
               </div>
