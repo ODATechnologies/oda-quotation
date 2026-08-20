@@ -76,11 +76,26 @@ export default function ProductManager({ showToast }) {
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
     const wsData = [
-      ["카테고리명", "규격명", "소비자가(원)", "해외단가(USD)", "상세사양1", "상세사양2", "상세사양3", "상세사양4", "상세사양5"],
-      ["Programmable DC Power Supply", "EX80-22.5", 100000000, 4818.00, "DC Output : 0~80V / 0~22.5A 1Channel", "Display Resolution : 4 Digit", "AC Input : 220V / 60Hz", "RS-232C, RS-485 통신 기본장착", ""],
+      ["카테고리명", "규격명", "소비자가(원)", "해외단가(USD)",
+       "상세사양1", "태그1(공통/국내전용/해외전용)",
+       "상세사양2", "태그2(공통/국내전용/해외전용)",
+       "상세사양3", "태그3(공통/국내전용/해외전용)",
+       "상세사양4", "태그4(공통/국내전용/해외전용)",
+       "상세사양5", "태그5(공통/국내전용/해외전용)"],
+      ["Programmable DC Power Supply", "EX80-22.5", 100000000, 4818.00,
+       "1φ 220V / 50~60Hz", "국내전용",
+       "DC Output : 0~80V / 0~22.5A 1Channel", "공통",
+       "Display Resolution : 4 Digit", "공통",
+       "RS-232C, RS-485 통신 기본장착", "공통",
+       "", "공통"],
     ];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws["!cols"] = [{wch:32},{wch:24},{wch:16},{wch:16},{wch:36},{wch:36},{wch:36},{wch:36},{wch:36}];
+    ws["!cols"] = [
+      {wch:32},{wch:24},{wch:16},{wch:16},
+      {wch:36},{wch:18},{wch:36},{wch:18},
+      {wch:36},{wch:18},{wch:36},{wch:18},
+      {wch:36},{wch:18},
+    ];
     XLSX.utils.book_append_sheet(wb, ws, "품목목록");
     XLSX.writeFile(wb, "ODA_품목목록_양식.xlsx");
     showToast("양식 파일이 다운로드되었습니다.", "success");
@@ -105,7 +120,17 @@ export default function ProductManager({ showToast }) {
           const spec    = String(r[1]).trim();
           const price        = Number(String(r[2]).replace(/,/g,"")) || 0;
           const overseasPrice= r[3] !== "" ? Number(String(r[3]).replace(/,/g,"")) : null;
-          const details = [r[4],r[5],r[6],r[7],r[8]].map(d=>String(d).trim()).filter(Boolean);
+          // 상세사양 + 태그 파싱 (상세사양N, 태그N 쌍으로)
+          const tagMap = { "국내전용":"domestic", "해외전용":"overseas", "공통":"common", "":"common" };
+          const details = [];
+          for (let ci = 4; ci < r.length; ci += 2) {
+            const text = String(r[ci] || "").trim();
+            if (!text) continue;
+            const tagKo  = String(r[ci+1] || "공통").trim();
+            const tagVal = tagMap[tagKo] || "common";
+            // 태그 접두어 붙여 저장
+            details.push(tagVal === "common" ? text : `[${tagVal}]${text}`);
+          }
           if (!catMap[catName]) catMap[catName] = [];
           catMap[catName].push({ id:`spec_${Date.now()}_${Math.random().toString(36).slice(2)}`, spec, listPrice:price, overseasPrice, details });
         });
