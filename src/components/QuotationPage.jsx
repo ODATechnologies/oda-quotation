@@ -94,7 +94,7 @@ export default function QuotationPage({ showToast }) {
 
   const supplier = mode === "overseas" ? SUPPLIER_INFO_OVERSEAS : SUPPLIER_INFO;
   const staff    = staffList.find(s => s._id === staffId) || filteredStaff[0] || {};
-  const custObj  = customerList.find(c => c.id === custId);
+  const custObj  = customerList.find(c => (c._id || c.id) === custId);
   const contact  = manualMode ? manualContact : (custObj?.contacts[contactIdx] || { name:"", phone:"", email:"" });
   const customerName = manualMode ? manualCompany : (custObj?.company || "");
 
@@ -200,7 +200,7 @@ export default function QuotationPage({ showToast }) {
   const handleLoadFromHistory = useCallback((record) => {
     const foundCust = customerList.find(c => c.company===record.customer);
     if (foundCust) {
-      setManualMode(false); setCustId(foundCust.id);
+      setManualMode(false); setCustId(foundCust._id || foundCust.id);
       const ci = foundCust.contacts.findIndex(c=>c.name===record.contact?.name);
       setContactIdx(ci>=0?ci:0);
     } else {
@@ -316,9 +316,9 @@ export default function QuotationPage({ showToast }) {
               <div className="form-grid" style={{ gap:10 }}>
                 <div className="form-group">
                   <label>수신 (업체) <span className="required">*</span></label>
-                  <select value={custId} onChange={e=>{ setCustId(Number(e.target.value)); setContactIdx(0); }}>
+                  <select value={custId} onChange={e=>{ setCustId(e.target.value); setContactIdx(0); }}>
                     <option value="">-- 업체 선택 --</option>
-                    {customerList.map(c=><option key={c.id} value={c.id}>{c.company}</option>)}
+                    {customerList.map(c=><option key={c._id||c.id} value={c._id||c.id}>{c.company}</option>)}
                   </select>
                 </div>
                 {custObj && (
