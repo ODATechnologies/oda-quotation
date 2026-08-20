@@ -276,17 +276,41 @@ function CategoryForm({ onSave, onClose }) {
     </div>
   </>);
 }
+// 상세사양 태그 옵션
+const DETAIL_TAGS = [
+  { value:"common",   label:"공통",     color:"#6B7280", bg:"#F3F4F6" },
+  { value:"domestic", label:"국내전용", color:"#185FA5", bg:"#EBF3FD" },
+  { value:"overseas", label:"해외전용", color:"#0F6E56", bg:"#E8F5EF" },
+];
+
 function SpecForm({ initial, onSave, onClose }) {
   const [spec,          setSpec]         = useState(initial.spec || "");
   const [listPrice,     setListPrice]    = useState(initial.listPrice || "");
-  // 해외단가: 입력 중에는 raw string 유지 (소수점 문제 방지)
   const [overseasPrice, setOverseasPrice]= useState(
     initial.overseasPrice != null ? String(initial.overseasPrice) : ""
   );
-  const [detailsText,   setDetailsText]  = useState((initial.details||[]).join("\n"));
+  // detailItems: [{text, tag}] 배열
+  const [detailItems, setDetailItems] = useState(() => {
+    const details = initial.details || [];
+    return details.length > 0
+      ? details.map(d => {
+          // 기존 데이터에 태그 접두어가 있으면 파싱
+          if (d.startsWith("[domestic]")) return { text: d.replace("[domestic]",""), tag:"domestic" };
+          if (d.startsWith("[overseas]")) return { text: d.replace("[overseas]",""), tag:"overseas" };
+          return { text: d, tag: "common" };
+        })
+      : [{ text:"", tag:"common" }];
+  });
+
+  function addDetail() { setDetailItems(p => [...p, { text:"", tag:"common" }]); }
+  function removeDetail(i) { setDetailItems(p => p.filter((_,idx)=>idx!==i)); }
+  function updateDetail(i, key, val) { setDetailItems(p => p.map((d,idx)=>idx===i?{...d,[key]:val}:d)); }
 
   function handleSave() {
-    const details = detailsText.split("\n").map(s=>s.trim()).filter(Boolean);
+    // 태그를 접두어로 저장: [domestic], [overseas], 공통은 그대로
+    const details = detailItems
+      .filter(d => d.text.trim())
+      .map(d => d.tag === "common" ? d.text.trim() : `[${d.tag}]${d.text.trim()}`);
     const op = overseasPrice.trim();
     onSave({
       spec,
@@ -320,28 +344,57 @@ function SpecForm({ initial, onSave, onClose }) {
         </label>
         <div style={{position:"relative"}}>
           <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"#059669",fontWeight:700,fontSize:14}}>$</span>
-          {/* type="number"로 소수점 자유 입력, 포맷 변환 없음 */}
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={overseasPrice}
+          <input type="number" min="0" step="0.01" value={overseasPrice}
             onChange={e => setOverseasPrice(e.target.value)}
-            placeholder="0.00"
-            style={{textAlign:"right", paddingLeft:22}}
-          />
+            placeholder="0.00" style={{textAlign:"right", paddingLeft:22}}/>
         </div>
         {overseasPrice !== "" && !isNaN(Number(overseasPrice)) && (
           <div style={{fontSize:11,color:"#059669",fontWeight:600,marginTop:3}}>
             = ${Number(overseasPrice).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}
           </div>
         )}
-        <div style={{fontSize:11,color:"var(--text-muted)",marginTop:2}}>환율 변환 없이 USD 직접 적용</div>
       </div>
+
+      {/* 상세 사양 + 태그 */}
       <div className="form-group" style={{gridColumn:"1 / -1"}}>
-        <label>상세 사양 (줄바꿈으로 구분)</label>
-        <textarea rows={5} value={detailsText} onChange={e=>setDetailsText(e.target.value)}
-          placeholder={"DC Output : 0~80V / 0~22.5A 1Channel\nDisplay Resolution : 4 Digit"}/>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <label style={{marginBottom:0}}>상세 사양</label>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addDetail}>+ 항목 추가</button>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {detailItems.map((d, i) => (
+            <div key={i} style={{display:"flex",gap:6,alignItems:"center"}}>
+              {/* 태그 선택 */}
+              <div style={{display:"flex",gap:4,flexShrink:0}}>
+                {DETAIL_TAGS.map(t => (
+                  <button key={t.value} type="button"
+                    onClick={() => updateDetail(i,"tag",t.value)}
+                    style={{
+                      padding:"3px 8px", border:"1px solid",
+                      borderColor: d.tag===t.value ? t.color : "var(--border)",
+                      borderRadius:20, fontSize:11, cursor:"pointer", fontFamily:"inherit",
+                      background: d.tag===t.value ? t.bg : "#fff",
+                      color: d.tag===t.value ? t.color : "var(--text-muted)",
+                      fontWeight: d.tag===t.value ? 700 : 400,
+                    }}>{t.label}</button>
+                ))}
+              </div>
+              {/* 사양 텍스트 */}
+              <input value={d.text}
+                onChange={e => updateDetail(i,"text",e.target.value)}
+                placeholder="예: DC Output : 0~80V / 0~22.5A 1Channel"
+                style={{flex:1, padding:"6px 10px", border:"1px solid var(--border)", borderRadius:6, fontSize:13}}/>
+              {/* 삭제 */}
+              {detailItems.length > 1 && (
+                <button type="button" onClick={()=>removeDetail(i)}
+                  style={{background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:16,padding:"0 4px"}}>✕</button>
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{fontSize:11,color:"var(--text-muted)",marginTop:6}}>
+          💡 공통: 국내·해외 모두 표시 &nbsp;|&nbsp; 국내전용: 국내 견적에만 &nbsp;|&nbsp; 해외전용: 해외 견적에만
+        </div>
       </div>
     </div>
     <div className="modal-footer">

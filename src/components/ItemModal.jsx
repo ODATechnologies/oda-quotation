@@ -52,6 +52,17 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // 모드에 따라 상세사양 필터링
+  function filterDetails(details, overseas) {
+    return (details||[])
+      .filter(d => {
+        if (d.startsWith("[domestic]")) return !overseas; // 국내전용
+        if (d.startsWith("[overseas]")) return overseas;  // 해외전용
+        return true; // 공통
+      })
+      .map(d => d.replace(/^\[(domestic|overseas)\]/, "")); // 태그 제거
+  }
+
   function selectSpec(s) {
     const hasOverseas = isOverseas && s.overseasPrice != null && s.overseasPrice !== 0;
     setForm(f => ({
@@ -62,9 +73,9 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
       listPrice:    s.listPrice,
       overseasPrice:s.overseasPrice ?? null,
       dc:           "",
-      manualPrice:  false,   // DC율 활성화 유지
+      manualPrice:  false,
       unitPrice:    hasOverseas ? s.overseasPrice : s.listPrice,
-      details:      s.details,
+      details:      filterDetails(s.details, isOverseas),
     }));
     setSpecSearch(s.spec);
     setShowDrop(false);
