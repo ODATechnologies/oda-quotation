@@ -1,8 +1,16 @@
 import { fmtNumber } from "./helpers";
 import logoSrc from "../assets/logo.png";
 
+function formatDateEn(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const months = ["January","February","March","April","May","June",
+                  "July","August","September","October","November","December"];
+  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
 export function exportToPdf(data) {
-  const { docNo, staff, supplier, customer, contact, items, terms, totalSupply, totalVat, grandTotal } = data;
+  const { docNo, date, staff, supplier, customer, contact, items, terms, totalSupply, totalVat, grandTotal } = data;
   const shortNo  = docNo.replace("ODA-", "");
   const fileName = `Quotation for ${customer} ${shortNo}`;
   const ODA  = "#F84F04";
@@ -148,6 +156,7 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
     <div class="info-row"><div class="info-label">Contact</div><div class="info-value">${contact.name||''}</div></div>
     <div class="info-row"><div class="info-label">Tel.</div><div class="info-value">${contact.phone||''}</div></div>
     <div class="info-row"><div class="info-label">E-mail</div><div class="info-value">${contact.email||''}</div></div>
+    <div class="info-row"><div class="info-label">Date</div><div class="info-value" style="font-weight:600">${formatDateEn(date)}</div></div>
   </div>
   <div class="info-box">
     <div class="info-title">ODA TECHNOLOGIES</div>
@@ -164,13 +173,13 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
   <thead>
     <tr>
       <th style="width:20px">NO</th>
-      <th style="text-align:center;width:22%">Description</th>
-      <th style="text-align:center;width:14%">Model</th>
+      <th style="text-align:center;width:26%">Description</th>
+      <th style="text-align:center;width:18%">Model</th>
       <th style="width:28px">Qty</th>
-      <th style="width:13%">Unit Price</th>
-      <th style="width:13%">Amount</th>
-      <th style="width:10%">VAT</th>
-      <th style="text-align:center">Remark</th>
+      <th style="width:12%">Unit Price</th>
+      <th style="width:12%">Amount</th>
+      <th style="width:9%">VAT</th>
+      <th style="text-align:center;width:7%">Remark</th>
     </tr>
   </thead>
   <tbody>
