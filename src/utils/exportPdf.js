@@ -225,22 +225,18 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 
 <script>
 document.fonts.ready.then(function(){
-  // 내용이 A4보다 길면 자동 축소
   var body = document.body;
-  var pageH = 297; // mm
   var mmToPx = 3.7795275591;
-  var maxH = pageH * mmToPx;
+  var maxH = 297 * mmToPx;
   var contentH = body.scrollHeight;
   if (contentH > maxH) {
-    var scale = maxH / contentH;
-    body.style.transform = 'scale(' + scale + ')';
-    body.style.transformOrigin = 'top left';
-    body.style.width = (100 / scale) + '%';
+    var scale = Math.floor((maxH / contentH) * 100) / 100;
+    body.style.zoom = scale;
   }
   setTimeout(function(){
     window.print();
     window.onafterprint = function(){ window.close(); };
-  }, 400);
+  }, 450);
 });
 <\/script>
 </body></html>`;
