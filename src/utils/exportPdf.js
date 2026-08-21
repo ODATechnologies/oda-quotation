@@ -28,6 +28,7 @@ body{
   html,body{width:210mm;}
   body{padding:32px 34px;}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  @page{size:A4 portrait;margin:0;-webkit-print-color-adjust:exact;}
 }
 
 /* 상단 */
@@ -224,6 +225,18 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 
 <script>
 document.fonts.ready.then(function(){
+  // 내용이 A4보다 길면 자동 축소
+  var body = document.body;
+  var pageH = 297; // mm
+  var mmToPx = 3.7795275591;
+  var maxH = pageH * mmToPx;
+  var contentH = body.scrollHeight;
+  if (contentH > maxH) {
+    var scale = maxH / contentH;
+    body.style.transform = 'scale(' + scale + ')';
+    body.style.transformOrigin = 'top left';
+    body.style.width = (100 / scale) + '%';
+  }
   setTimeout(function(){
     window.print();
     window.onafterprint = function(){ window.close(); };
