@@ -3,10 +3,7 @@ import logoSrc from "../assets/logo.png";
 
 function formatDateEn(dateStr) {
   if (!dateStr) return "";
-  const d = new Date(dateStr);
-  const months = ["January","February","March","April","May","June",
-                  "July","August","September","October","November","December"];
-  return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  return dateStr; // YYYY-MM-DD 그대로 표시
 }
 
 export function exportToPdf(data) {
@@ -150,21 +147,29 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 
 <!-- INFO -->
 <div class="info-wrap">
-  <div class="info-box">
-    <div class="info-title">CUSTOMER</div>
-    <div class="info-row"><div class="info-label">Company</div><div class="info-value" style="font-weight:700">${customer||''}</div></div>
-    <div class="info-row"><div class="info-label">Contact</div><div class="info-value">${contact.name||''}</div></div>
-    <div class="info-row"><div class="info-label">Tel.</div><div class="info-value">${contact.phone||''}</div></div>
-    <div class="info-row"><div class="info-label">E-mail</div><div class="info-value">${contact.email||''}</div></div>
-    <div class="info-row"><div class="info-label">Date</div><div class="info-value" style="font-weight:600">${formatDateEn(date)}</div></div>
+  <div class="info-wrap-td">
+    <table class="info-box">
+      <tbody>
+        <tr><td colspan="2" class="info-title">CUSTOMER</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Company</td><td class="info-value" style="font-weight:700">${customer||''}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Contact</td><td class="info-value">${contact.name||''}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Tel.</td><td class="info-value">${contact.phone||''}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">E-mail</td><td class="info-value">${contact.email||''}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Date</td><td class="info-value" style="font-weight:600">${formatDateEn(date)}</td></tr>
+      </tbody>
+    </table>
   </div>
-  <div class="info-box">
-    <div class="info-title">ODA TECHNOLOGIES</div>
-    <div class="info-row"><div class="info-label">Doc. No.</div><div class="info-value" style="font-weight:700">${docNo}</div></div>
-    <div class="info-row"><div class="info-label">Supplier</div><div class="info-value">${supplier.name}</div></div>
-    <div class="info-row"><div class="info-label">Reg. No.</div><div class="info-value">${supplier.bizNo}</div></div>
-    <div class="info-row"><div class="info-label">Sales Rep.</div><div class="info-value">${staff.name||''}</div></div>
-    <div class="info-row"><div class="info-label">Tel.</div><div class="info-value">${staff.phone||''}</div></div>
+  <div class="info-wrap-td">
+    <table class="info-box">
+      <tbody>
+        <tr><td colspan="2" class="info-title">ODA TECHNOLOGIES</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Doc. No.</td><td class="info-value" style="font-weight:700">${docNo}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Supplier</td><td class="info-value">${supplier.name}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Reg. No.</td><td class="info-value">${supplier.bizNo}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Sales Rep.</td><td class="info-value">${staff.name||''}</td></tr>
+        <tr class="info-row-tr"><td class="info-label">Tel.</td><td class="info-value">${staff.phone||''}</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
