@@ -44,13 +44,15 @@ body{
 .subtitle{font-size:8px;letter-spacing:2.5px;color:#aaa;margin-top:3px;display:block;text-transform:uppercase;}
 .orange-bar{height:2.5px;background:${ODA};margin-bottom:12px;flex-shrink:0;}
 
-/* INFO */
-.info-wrap{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;flex-shrink:0;}
-.info-box{border:1px solid #ccc;}
-.info-title{background:${DARK};color:#fff;font-size:9px;font-weight:700;padding:4px 8px;letter-spacing:.1em;display:block;width:100%;}
-.info-row{display:flex;border-top:1px solid #e0e0e0;}
-.info-label{background:#f4f4f4;font-size:9px;font-weight:700;color:#555;padding:4px 7px;min-width:70px;width:70px;border-right:1px solid #e0e0e0;display:flex;align-items:center;}
-.info-value{padding:4px 7px;font-size:10px;color:#111;display:flex;align-items:center;flex:1;}
+/* INFO - table 방식 (인쇄 배경색 안정) */
+.info-table{width:100%;border-collapse:collapse;margin-bottom:14px;flex-shrink:0;}
+.info-table > tbody > tr > td{width:50%;vertical-align:top;padding:0;}
+.info-table > tbody > tr > td:first-child{padding-right:3px;}
+.info-table > tbody > tr > td:last-child{padding-left:3px;}
+.i-box{width:100%;border-collapse:collapse;border:1px solid #ccc;}
+.i-box tr.hdr td{background:${DARK};color:#fff;font-size:9px;font-weight:700;padding:4px 8px;letter-spacing:.1em;border:none;}
+.i-box tr td{border-top:1px solid #e0e0e0;padding:4px 7px;font-size:10px;color:#111;}
+.i-box tr td.lbl{background:#f4f4f4;font-size:9px;font-weight:700;color:#555;width:70px;border-right:1px solid #e0e0e0;white-space:nowrap;}
 
 /* 품목 테이블 */
 .item-table{width:100%;border-collapse:collapse;font-size:9px;flex-shrink:0;}
