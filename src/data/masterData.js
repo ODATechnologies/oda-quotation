@@ -7,7 +7,7 @@ export const INITIAL_PRODUCTS = [];
 export const DEFAULT_TERMS = {
   delivery: "발주일로 부터 주",
   validity: "견적일로부터 개월",
-  payment: "현금결제",
+  payment: "현금선결제",
 };
 
 export const SUPPLIER_INFO = {
