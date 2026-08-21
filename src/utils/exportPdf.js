@@ -146,24 +146,32 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 <div class="orange-bar"></div>
 
 <!-- INFO -->
-<div class="info-wrap">
-  <div class="info-box">
-    <div class="info-title">CUSTOMER</div>
-    <div class="info-row"><div class="info-label">Company</div><div class="info-value" style="font-weight:700">${customer||''}</div></div>
-    <div class="info-row"><div class="info-label">Contact</div><div class="info-value">${contact.name||''}</div></div>
-    <div class="info-row"><div class="info-label">Tel.</div><div class="info-value">${contact.phone||''}</div></div>
-    <div class="info-row"><div class="info-label">E-mail</div><div class="info-value">${contact.email||''}</div></div>
-    <div class="info-row"><div class="info-label">Date</div><div class="info-value" style="font-weight:600">${formatDateEn(date)}</div></div>
-  </div>
-  <div class="info-box">
-    <div class="info-title">ODA TECHNOLOGIES</div>
-    <div class="info-row"><div class="info-label">Doc. No.</div><div class="info-value" style="font-weight:700">${docNo}</div></div>
-    <div class="info-row"><div class="info-label">Supplier</div><div class="info-value">${supplier.name}</div></div>
-    <div class="info-row"><div class="info-label">Reg. No.</div><div class="info-value">${supplier.bizNo}</div></div>
-    <div class="info-row"><div class="info-label">Sales Rep.</div><div class="info-value">${staff.name||''}</div></div>
-    <div class="info-row"><div class="info-label">Tel.</div><div class="info-value">${staff.phone||''}</div></div>
-  </div>
-</div>
+<table class="info-outer"><tbody><tr>
+  <td>
+    <table class="info-inner">
+      <thead><tr><th class="i-hdr" colspan="2">CUSTOMER</th></tr></thead>
+      <tbody>
+        <tr><td class="i-lbl">Company</td><td class="i-val" style="font-weight:700">${customer||''}</td></tr>
+        <tr><td class="i-lbl">Contact</td><td class="i-val">${contact.name||''}</td></tr>
+        <tr><td class="i-lbl">Tel.</td><td class="i-val">${contact.phone||''}</td></tr>
+        <tr><td class="i-lbl">E-mail</td><td class="i-val">${contact.email||''}</td></tr>
+        <tr><td class="i-lbl">Date</td><td class="i-val" style="font-weight:600">${formatDateEn(date)}</td></tr>
+      </tbody>
+    </table>
+  </td>
+  <td>
+    <table class="info-inner">
+      <thead><tr><th class="i-hdr" colspan="2">ODA TECHNOLOGIES</th></tr></thead>
+      <tbody>
+        <tr><td class="i-lbl">Doc. No.</td><td class="i-val" style="font-weight:700">${docNo}</td></tr>
+        <tr><td class="i-lbl">Supplier</td><td class="i-val">${supplier.name}</td></tr>
+        <tr><td class="i-lbl">Reg. No.</td><td class="i-val">${supplier.bizNo}</td></tr>
+        <tr><td class="i-lbl">Sales Rep.</td><td class="i-val">${staff.name||''}</td></tr>
+        <tr><td class="i-lbl">Tel.</td><td class="i-val">${staff.phone||''}</td></tr>
+      </tbody>
+    </table>
+  </td>
+</tr></tbody></table>
 
 <!-- 품목 -->
 <table class="item-table">
