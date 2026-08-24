@@ -572,9 +572,9 @@ function SpecForm({ initial, onSave, onClose, allSpecs=[] }) {
         </div>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,marginBottom:8}}>
           <thead>
-            <tr>
+            <tr style={{background:"var(--fill-accent)"}}>
               {["구성품명","수량","단가 (KRW)","NEGO율(%)","금액",""].map((h,i)=>(
-                <th key={i} style={{textAlign:i>=1&&i<=4?"right":"left",fontSize:11,fontWeight:500,color:"var(--text-muted)",padding:"4px 8px",borderBottom:"0.5px solid var(--border)"}}>{h}</th>
+                <th key={i} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#fff",padding:"6px 8px",borderBottom:"0.5px solid var(--border)"}}>{h}</th>
               ))}
             </tr>
           </thead>
