@@ -28,11 +28,16 @@ export default function ProductManager({ showToast }) {
       )
     : list;
 
-  async function saveCategory(name) {
+  async function saveCategory(name, isEdit=false, catItem=null) {
     try {
       const fn = tab === "shared" ? saveShared : saveMy;
-      await fn({ category: name, specs: [] });
-      showToast("카테고리가 추가되었습니다.", "success");
+      if (isEdit && catItem) {
+        await fn({ ...catItem, category: name });
+        showToast("카테고리명이 수정되었습니다.", "success");
+      } else {
+        await fn({ category: name, specs: [] });
+        showToast("카테고리가 추가되었습니다.", "success");
+      }
       setModal(null);
     } catch(e) { showToast("오류: " + e.message, "error"); }
   }
@@ -86,6 +91,48 @@ export default function ProductManager({ showToast }) {
       showToast(`"${spec.spec}" → "${toCat.category}" 이동 완료`, "success");
       setModal(null);
     } catch(e) { showToast("오류: " + e.message, "error"); }
+  }
+
+  // 등록된 품목 엑셀 다운로드
+  function downloadAllProducts() {
+    const wb = XLSX.utils.book_new();
+    const wsData = [
+      ["카테고리명", "규격명", "소비자가(원)", "해외단가(USD)",
+       "상세사양1", "태그1", "상세사양2", "태그2",
+       "상세사양3", "태그3", "상세사양4", "태그4", "상세사양5", "태그5"],
+    ];
+    const tagLabelMap = { domestic:"국내전용", overseas:"해외전용", common:"공통" };
+    const items = tab === "shared" ? sharedItems : myItems;
+    items.forEach(cat => {
+      (cat.specs||[]).forEach(s => {
+        const row = [
+          cat.category, s.spec||"",
+          s.listPrice||0, s.overseasPrice||"",
+        ];
+        const details = s.details||[];
+        for (let i=0; i<5; i++) {
+          const d = details[i] || "";
+          if (d) {
+            let tag = "common", text = d;
+            if (d.startsWith("[domestic]")) { tag="domestic"; text=d.replace("[domestic]",""); }
+            else if (d.startsWith("[overseas]")) { tag="overseas"; text=d.replace("[overseas]",""); }
+            row.push(text, tagLabelMap[tag]);
+          } else {
+            row.push("", "");
+          }
+        }
+        wsData.push(row);
+      });
+    });
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws["!cols"] = [
+      {wch:32},{wch:24},{wch:16},{wch:16},
+      {wch:36},{wch:12},{wch:36},{wch:12},
+      {wch:36},{wch:12},{wch:36},{wch:12},{wch:36},{wch:12},
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, "품목목록");
+    XLSX.writeFile(wb, `ODA_품목목록_${tab === "shared" ? "공용" : "내품목"}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast("품목 목록이 다운로드되었습니다.", "success");
   }
 
   // Excel 양식 다운로드
@@ -175,6 +222,7 @@ export default function ProductManager({ showToast }) {
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
         <h2 style={{ fontSize:17, fontWeight:700, color:"var(--primary)" }}>품목 관리</h2>
         <div style={{ display:"flex", gap:8 }}>
+          <button className="btn btn-secondary" onClick={downloadAllProducts}>📤 품목 다운로드</button>
           <button className="btn btn-secondary" onClick={downloadTemplate}>📥 양식 다운로드</button>
           <button className="btn btn-success"   onClick={() => fileRef.current.click()}>📤 Excel 업로드</button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={handleUpload}/>
@@ -229,6 +277,12 @@ export default function ProductManager({ showToast }) {
                 <button className="btn btn-secondary btn-sm"
                   onClick={() => setModal({ mode:"add-spec", catItem:cat, data:{spec:"",listPrice:"",details:[]} })}>
                   + 규격 추가
+                </button>
+              )}
+              {canEdit && (
+                <button className="btn btn-secondary btn-sm"
+                  onClick={() => setModal({ mode:"edit-category", catItem:cat })}>
+                  카테고리 수정
                 </button>
               )}
               {canEdit && <button className="btn btn-ghost btn-sm" onClick={() => removeCategory(cat)}>카테고리 삭제</button>}
