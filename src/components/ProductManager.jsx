@@ -346,6 +346,15 @@ export default function ProductManager({ showToast }) {
           <CategoryForm onSave={saveCategory} onClose={() => setModal(null)} />
         </ModalWrap>
       )}
+      {modal?.mode === "edit-category" && (
+        <ModalWrap title="카테고리명 수정" onClose={() => setModal(null)}>
+          <CategoryEditForm
+            initial={modal.catItem.category}
+            onSave={name => saveCategory(name, true, modal.catItem)}
+            onClose={() => setModal(null)}
+          />
+        </ModalWrap>
+      )}
       {(modal?.mode === "add-spec" || modal?.mode === "edit-spec") && (
         <ModalWrap title={modal.mode === "add-spec" ? "규격 추가" : "규격 수정"} onClose={() => setModal(null)}>
           <SpecForm initial={modal.data} onSave={d => saveSpec(modal.catItem, d)} onClose={() => setModal(null)} />
@@ -372,6 +381,19 @@ function ModalWrap({ title, children, onClose }) {
     </div>
   );
 }
+function CategoryEditForm({ initial, onSave, onClose }) {
+  const [name, setName] = useState(initial || "");
+  return (<>
+    <div className="form-group"><label>카테고리명</label>
+      <input value={name} onChange={e=>setName(e.target.value)} autoFocus/>
+    </div>
+    <div className="modal-footer">
+      <button className="btn btn-secondary" onClick={onClose}>취소</button>
+      <button className="btn btn-primary" onClick={() => onSave(name)}>저장</button>
+    </div>
+  </>);
+}
+
 function CategoryForm({ onSave, onClose }) {
   const [name, setName] = useState("");
   return (<>
