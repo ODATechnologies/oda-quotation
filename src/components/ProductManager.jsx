@@ -72,6 +72,22 @@ export default function ProductManager({ showToast }) {
     } catch(e) { showToast("오류: " + e.message, "error"); }
   }
 
+  async function moveSpec(fromCat, specId, toCatId) {
+    const spec = (fromCat.specs||[]).find(s => s.id === specId);
+    if (!spec) return;
+    const toCat = list.find(c => c._id === toCatId);
+    if (!toCat) return;
+    const fn = tab === "shared" ? saveShared : saveMy;
+    try {
+      // 기존 카테고리에서 제거
+      await fn({ ...fromCat, specs: (fromCat.specs||[]).filter(s => s.id !== specId) });
+      // 대상 카테고리에 추가
+      await fn({ ...toCat, specs: [...(toCat.specs||[]), { ...spec, id: `spec_${Date.now()}` }] });
+      showToast(`"${spec.spec}" → "${toCat.category}" 이동 완료`, "success");
+      setModal(null);
+    } catch(e) { showToast("오류: " + e.message, "error"); }
+  }
+
   // Excel 양식 다운로드
   function downloadTemplate() {
     const wb = XLSX.utils.book_new();
@@ -249,6 +265,9 @@ export default function ProductManager({ showToast }) {
                             <button className="btn btn-secondary btn-sm"
                               onClick={() => setModal({ mode:"edit-spec", catItem:cat, specId:s.id, data:s })}>수정</button>
                             {" "}
+                            <button className="btn btn-secondary btn-sm"
+                              onClick={() => setModal({ mode:"move-spec", catItem:cat, specId:s.id, specName:s.spec })}>이동</button>
+                            {" "}
                             <button className="btn btn-ghost btn-sm" onClick={() => removeSpec(cat, s.id)}>삭제</button>
                           </>}
                         </td>
@@ -276,6 +295,16 @@ export default function ProductManager({ showToast }) {
       {(modal?.mode === "add-spec" || modal?.mode === "edit-spec") && (
         <ModalWrap title={modal.mode === "add-spec" ? "규격 추가" : "규격 수정"} onClose={() => setModal(null)}>
           <SpecForm initial={modal.data} onSave={d => saveSpec(modal.catItem, d)} onClose={() => setModal(null)} />
+        </ModalWrap>
+      )}
+      {modal?.mode === "move-spec" && (
+        <ModalWrap title="카테고리 이동" onClose={() => setModal(null)}>
+          <MoveSpecForm
+            specName={modal.specName}
+            categories={list.filter(c => c._id !== modal.catItem._id)}
+            onMove={toCatId => moveSpec(modal.catItem, modal.specId, toCatId)}
+            onClose={() => setModal(null)}
+          />
         </ModalWrap>
       )}
     </div>
@@ -425,6 +454,29 @@ function SpecForm({ initial, onSave, onClose }) {
     <div className="modal-footer">
       <button className="btn btn-secondary" onClick={onClose}>취소</button>
       <button className="btn btn-primary" onClick={handleSave}>저장</button>
+    </div>
+  </>);
+}
+
+function MoveSpecForm({ specName, categories, onMove, onClose }) {
+  const [toCatId, setToCatId] = useState(categories[0]?._id || "");
+  return (<>
+    <div style={{ marginBottom:12 }}>
+      <div style={{ fontSize:12, color:"var(--text-muted)", marginBottom:4 }}>이동할 규격</div>
+      <div style={{ fontSize:14, fontWeight:700 }}>{specName}</div>
+    </div>
+    <div className="form-group">
+      <label>이동할 카테고리</label>
+      <select value={toCatId} onChange={e => setToCatId(e.target.value)}
+        style={{ width:"100%", padding:"8px 10px", border:"1px solid var(--border)", borderRadius:6, fontSize:13 }}>
+        {categories.map(cat => (
+          <option key={cat._id} value={cat._id}>{cat.category}</option>
+        ))}
+      </select>
+    </div>
+    <div className="modal-footer">
+      <button className="btn btn-secondary" onClick={onClose}>취소</button>
+      <button className="btn btn-primary" onClick={() => onMove(toCatId)} disabled={!toCatId}>이동</button>
     </div>
   </>);
 }
