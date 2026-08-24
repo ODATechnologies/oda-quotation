@@ -357,7 +357,14 @@ export default function ProductManager({ showToast }) {
       )}
       {(modal?.mode === "add-spec" || modal?.mode === "edit-spec") && (
         <ModalWrap title={modal.mode === "add-spec" ? "규격 추가" : "규격 수정"} onClose={() => setModal(null)}>
-          <SpecForm initial={modal.data} onSave={d => saveSpec(modal.catItem, d)} onClose={() => setModal(null)} />
+          <SpecForm
+            initial={modal.data}
+            allSpecs={[...sharedItems, ...myItems].flatMap(cat =>
+              (cat.specs||[]).map(s => ({ ...s, catName: cat.category }))
+            )}
+            onSave={d => saveSpec(modal.catItem, d)}
+            onClose={() => setModal(null)}
+          />
         </ModalWrap>
       )}
       {modal?.mode === "move-spec" && (
@@ -413,8 +420,24 @@ const DETAIL_TAGS = [
   { value:"overseas", label:"해외전용", color:"#0F6E56", bg:"#E8F5EF" },
 ];
 
-function SpecForm({ initial, onSave, onClose }) {
+function SpecForm({ initial, onSave, onClose, allSpecs=[] }) {
   const [activeTab, setActiveTab] = useState("basic");
+  const [bundleSearch, setBundleSearch] = useState("");
+  const [bundleSearchIdx, setBundleSearchIdx] = useState(null);
+  const bundleDropResults = (idx) => {
+    const q = bundleSearch;
+    if (!q || bundleSearchIdx !== idx) return [];
+    return allSpecs.filter(s =>
+      s.spec?.toLowerCase().includes(q.toLowerCase()) ||
+      s.catName?.toLowerCase().includes(q.toLowerCase())
+    ).slice(0, 8);
+  };
+  function selectBundleSpec(i, s) {
+    updateBundle(i, "name", s.spec);
+    updateBundle(i, "unitPrice", s.listPrice || 0);
+    setBundleSearch("");
+    setBundleSearchIdx(null);
+  }
   const [spec,          setSpec]         = useState(initial.spec || "");
   const [listPrice,     setListPrice]    = useState(initial.listPrice || "");
   const [overseasPrice, setOverseasPrice]= useState(
