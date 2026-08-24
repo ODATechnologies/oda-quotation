@@ -7,7 +7,7 @@ function formatDateEn(dateStr) {
 }
 
 export function exportToPdf(data) {
-  const { docNo, date, staff, supplier, customer, contact, items, terms, memo, totalSupply, totalVat, grandTotal } = data;
+  const { docNo, date, staff, supplier, customer, contact, items, terms, memo, memoColor, totalSupply, totalVat, grandTotal } = data;
   const shortNo  = docNo.replace("ODA-", "");
   const fileName = `Quotation for ${customer} ${shortNo}`;
   const ODA  = "#F84F04";
@@ -204,7 +204,7 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
 
 <div class="spacer"></div>
 ${memo ? `
-<div style="margin-bottom:10px;border:1px solid #e0e0e0;border-radius:4px;padding:8px 12px;font-size:9px;color:#333;line-height:1.7;flex-shrink:0;white-space:pre-wrap;">${memo}</div>
+<div style="margin-bottom:10px;padding:6px 2px;font-size:9px;color:${memoColor||"#111"};line-height:1.8;flex-shrink:0;white-space:pre-wrap;font-weight:${(memoColor&&memoColor!=="#111111")?"600":"400"};">${memo}</div>
 ` : ""}
 
 <!-- TERMS & 합계: 완전한 table-in-table 방식 -->

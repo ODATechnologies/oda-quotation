@@ -61,6 +61,7 @@ export default function QuotationPage({ showToast }) {
   const [terms,         setTerms]         = useState(DEFAULT_TERMS);
   const [items,         setItems]         = useState([]);
   const [memo,          setMemo]          = useState("");
+  const [memoColor,     setMemoColor]     = useState("#111111");
   const [nextId,        setNextId]        = useState(1);
   const [customerHistory, setCustomerHistory] = useState([]);
   const [histLoading,   setHistLoading]   = useState(false);
@@ -175,7 +176,7 @@ export default function QuotationPage({ showToast }) {
       staff:    { name:staff.name||"", phone:staff.phone||"" },
       supplier,
       customer: customerName, contact,
-      items: calcedItems, terms, memo,
+      items: calcedItems, terms, memo, memoColor,
       totalSupply, totalVat, grandTotal,
       totalUSD, exchangeRate,
       overseasForm: mergedOverseasForm,
@@ -214,6 +215,7 @@ export default function QuotationPage({ showToast }) {
     setDate(record.date||todayStr());
     setTerms(record.terms||DEFAULT_TERMS);
     setMemo(record.memo||"");
+    setMemoColor(record.memoColor||"#111111");
     setFixedDocNo(record.docNo);
     if (record.mode) setMode(record.mode);
     if (record.exchangeRate) setExchangeRate(record.exchangeRate);
@@ -228,7 +230,7 @@ export default function QuotationPage({ showToast }) {
     setDate(todayStr()); setMode("domestic"); setExchangeRate(1350);
     setCustId(""); setContactIdx(0); setManualMode(false);
     setManualCompany(""); setManualContact({name:"",phone:"",email:""});
-    setTerms(DEFAULT_TERMS); setItems([]); setNextId(1); setFixedDocNo(null); setMemo("");
+    setTerms(DEFAULT_TERMS); setItems([]); setNextId(1); setFixedDocNo(null); setMemo(""); setMemoColor("#111111");
   }
 
   function handlePdfExport() {
@@ -464,14 +466,28 @@ export default function QuotationPage({ showToast }) {
 
       {/* 견적 비고 */}
       <div className="card">
-        <div className="card-header"><span className="card-title">비고 (견적서 하단 표시)</span></div>
+        <div className="card-header">
+          <span className="card-title">비고 (견적서 하단 표시)</span>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:12, color:"var(--text-muted)" }}>글씨 색상</span>
+            {["#111111","#F84F04","#2563EB","#059669","#DC2626","#6B7280"].map(color => (
+              <button key={color} onClick={() => setMemoColor(color)}
+                style={{
+                  width:20, height:20, borderRadius:"50%", border: memoColor===color ? "2px solid #333" : "2px solid transparent",
+                  background:color, cursor:"pointer", padding:0, outline: memoColor===color ? "2px solid #fff" : "none", outlineOffset:"-3px"
+                }}/>
+            ))}
+            <input type="color" value={memoColor} onChange={e=>setMemoColor(e.target.value)}
+              style={{ width:24, height:24, border:"none", borderRadius:4, cursor:"pointer", padding:0 }} title="직접 선택"/>
+          </div>
+        </div>
         <div className="card-body">
           <textarea
             value={memo}
             onChange={e => setMemo(e.target.value)}
             rows={3}
-            placeholder="견적서 품목 아래 별도 안내사항을 입력하세요. (예: 납기, 운송조건, 특이사항 등)"
-            style={{ width:"100%", padding:"10px 12px", border:"1px solid var(--border)", borderRadius:6, fontSize:13, fontFamily:"inherit", resize:"vertical" }}
+            placeholder="견적서 품목 아래 별도 안내사항을 입력하세요."
+            style={{ width:"100%", padding:"10px 12px", border:"1px solid var(--border)", borderRadius:6, fontSize:13, fontFamily:"inherit", resize:"vertical", color:memoColor, fontWeight: memoColor !== "#111111" ? 600 : 400 }}
           />
         </div>
       </div>
