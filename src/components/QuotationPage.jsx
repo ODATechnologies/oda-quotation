@@ -60,6 +60,7 @@ export default function QuotationPage({ showToast }) {
   const [manualContact, setManualContact] = useState({ name:"", phone:"", email:"" });
   const [terms,         setTerms]         = useState(DEFAULT_TERMS);
   const [items,         setItems]         = useState([]);
+  const [memo,          setMemo]          = useState("");
   const [nextId,        setNextId]        = useState(1);
   const [customerHistory, setCustomerHistory] = useState([]);
   const [histLoading,   setHistLoading]   = useState(false);
@@ -174,7 +175,7 @@ export default function QuotationPage({ showToast }) {
       staff:    { name:staff.name||"", phone:staff.phone||"" },
       supplier,
       customer: customerName, contact,
-      items: calcedItems, terms,
+      items: calcedItems, terms, memo,
       totalSupply, totalVat, grandTotal,
       totalUSD, exchangeRate,
       overseasForm: mergedOverseasForm,
@@ -212,6 +213,7 @@ export default function QuotationPage({ showToast }) {
     if (foundStaff) setStaffId(foundStaff._id);
     setDate(record.date||todayStr());
     setTerms(record.terms||DEFAULT_TERMS);
+    setMemo(record.memo||"");
     setFixedDocNo(record.docNo);
     if (record.mode) setMode(record.mode);
     if (record.exchangeRate) setExchangeRate(record.exchangeRate);
@@ -226,7 +228,7 @@ export default function QuotationPage({ showToast }) {
     setDate(todayStr()); setMode("domestic"); setExchangeRate(1350);
     setCustId(""); setContactIdx(0); setManualMode(false);
     setManualCompany(""); setManualContact({name:"",phone:"",email:""});
-    setTerms(DEFAULT_TERMS); setItems([]); setNextId(1); setFixedDocNo(null);
+    setTerms(DEFAULT_TERMS); setItems([]); setNextId(1); setFixedDocNo(null); setMemo("");
   }
 
   function handlePdfExport() {
@@ -459,6 +461,20 @@ export default function QuotationPage({ showToast }) {
           supplierInfo={supplier}
         />
       )}
+
+      {/* 견적 비고 */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">비고 (견적서 하단 표시)</span></div>
+        <div className="card-body">
+          <textarea
+            value={memo}
+            onChange={e => setMemo(e.target.value)}
+            rows={3}
+            placeholder="견적서 품목 아래 별도 안내사항을 입력하세요. (예: 납기, 운송조건, 특이사항 등)"
+            style={{ width:"100%", padding:"10px 12px", border:"1px solid var(--border)", borderRadius:6, fontSize:13, fontFamily:"inherit", resize:"vertical" }}
+          />
+        </div>
+      </div>
 
       {/* 품목 팝업 */}
       {itemModal && (
