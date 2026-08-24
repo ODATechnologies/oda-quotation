@@ -575,23 +575,46 @@ function SpecForm({ initial, onSave, onClose, allSpecs=[] }) {
             </tr>
           </thead>
           <tbody>
-            {bundleItems.map((b,i)=>(
+            {bundleItems.map((b,i)=>{
+              const drops = bundleDropResults(i);
+              return (
               <tr key={i} style={{borderBottom:"0.5px solid var(--border)"}}>
-                <td style={{padding:"5px 4px"}}>
-                  <input value={b.name} onChange={e=>updateBundle(i,"name",e.target.value)}
-                    placeholder="예: EX50-72 (파워서플라이)"
+                <td style={{padding:"5px 4px",position:"relative"}}>
+                  <input
+                    value={bundleSearchIdx===i ? bundleSearch : b.name}
+                    onChange={e=>{ setBundleSearch(e.target.value); setBundleSearchIdx(i); updateBundle(i,"name",e.target.value); }}
+                    onFocus={()=>{ setBundleSearch(b.name||""); setBundleSearchIdx(i); }}
+                    onBlur={()=>setTimeout(()=>setBundleSearchIdx(null),200)}
+                    placeholder="품목 검색 또는 직접 입력"
                     style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,fontFamily:"inherit"}}/>
+                  {drops.length > 0 && (
+                    <div style={{position:"absolute",top:"100%",left:0,right:0,background:"var(--surface-2)",border:"1px solid var(--border-strong)",borderRadius:6,zIndex:200,boxShadow:"0 4px 12px rgba(0,0,0,.12)",maxHeight:200,overflowY:"auto"}}>
+                      {drops.map((s,di)=>(
+                        <div key={di}
+                          onMouseDown={e=>{ e.preventDefault(); selectBundleSpec(i,s); }}
+                          style={{padding:"7px 10px",cursor:"pointer",borderBottom:"0.5px solid var(--border)",fontSize:12}}
+                          onMouseEnter={e=>e.currentTarget.style.background="var(--surface-1)"}
+                          onMouseLeave={e=>e.currentTarget.style.background=""}>
+                          <div style={{fontWeight:600,color:"var(--text-primary)"}}>{s.spec}</div>
+                          <div style={{fontSize:11,color:"var(--text-muted)",display:"flex",justifyContent:"space-between",marginTop:2}}>
+                            <span>{s.catName}</span>
+                            <span style={{color:"var(--text-accent)",fontWeight:500}}>₩{(s.listPrice||0).toLocaleString("ko-KR")}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </td>
-                <td style={{padding:"5px 4px",width:60}}>
+                <td style={{padding:"5px 4px",width:55}}>
                   <input type="number" value={b.qty} onChange={e=>updateBundle(i,"qty",e.target.value)}
                     style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,textAlign:"right",fontFamily:"inherit"}}/>
                 </td>
-                <td style={{padding:"5px 4px",width:120}}>
-                  <input value={Number(b.unitPrice).toLocaleString("ko-KR")}
+                <td style={{padding:"5px 4px",width:130}}>
+                  <input value={Number(b.unitPrice||0).toLocaleString("ko-KR")}
                     onChange={e=>updateBundle(i,"unitPrice",e.target.value.replace(/,/g,""))}
                     style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,textAlign:"right",fontFamily:"inherit"}}/>
                 </td>
-                <td style={{padding:"5px 8px",textAlign:"right",color:"var(--text-secondary)",fontSize:12,width:100}}>
+                <td style={{padding:"5px 8px",textAlign:"right",color:"var(--text-secondary)",fontSize:12,width:110}}>
                   {((Number(b.qty)||0)*(Number(b.unitPrice)||0)).toLocaleString("ko-KR")}
                 </td>
                 <td style={{padding:"5px 4px",width:24,textAlign:"center"}}>
@@ -599,7 +622,7 @@ function SpecForm({ initial, onSave, onClose, allSpecs=[] }) {
                     style={{background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:16,padding:0,lineHeight:1}}>✕</button>}
                 </td>
               </tr>
-            ))}
+            );})}
           </tbody>
         </table>
         <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:10,padding:"8px",borderTop:"1px solid var(--border-strong)"}}>
