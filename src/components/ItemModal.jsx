@@ -16,18 +16,22 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   };
   const krwFromUSD = (usd) => Math.round(Number(usd) * rate);
 
-  // 전체 규격 flat
+  // 전체 규격 flat — isBundle, bundleItems 포함
   const allSpecs = useMemo(() => {
     const result = [];
     (productList || []).forEach(cat => {
       (cat.specs || []).forEach(s => {
         result.push({
-          catId: cat._id || cat.id, catName: cat.category,
-          specId: s.id, spec: s.spec,
-          listPrice: s.listPrice,
-          overseasPrice: s.overseasPrice ?? null,
-          details: s.details || [],
-          isShared: cat._type === "shared" || !cat._type,
+          catId:        cat._id || cat.id,
+          catName:      cat.category,
+          specId:       s.id,
+          spec:         s.spec,
+          listPrice:    s.listPrice,
+          overseasPrice:s.overseasPrice ?? null,
+          details:      s.details || [],
+          isShared:     cat._type === "shared" || !cat._type,
+          isBundle:     s.isBundle  || false,
+          bundleItems:  s.bundleItems || [],
         });
       });
     });
@@ -56,16 +60,15 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   function filterDetails(details, overseas) {
     return (details||[])
       .filter(d => {
-        if (d.startsWith("[domestic]")) return !overseas; // 국내전용
-        if (d.startsWith("[overseas]")) return overseas;  // 해외전용
-        return true; // 공통
+        if (d.startsWith("[domestic]")) return !overseas;
+        if (d.startsWith("[overseas]")) return overseas;
+        return true;
       })
-      .map(d => d.replace(/^\[(domestic|overseas)\]/, "")); // 태그 제거
+      .map(d => d.replace(/^\[(domestic|overseas)\]/, ""));
   }
 
   function selectSpec(s) {
     const hasOverseas = isOverseas && s.overseasPrice != null && s.overseasPrice !== 0;
-    // 번들이면 listPrice가 이미 합산금액
     setForm(f => ({
       ...f,
       category:     s.catName,
@@ -77,7 +80,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
       manualPrice:  false,
       unitPrice:    hasOverseas ? s.overseasPrice : s.listPrice,
       details:      filterDetails(s.details, isOverseas),
-      isBundle:     s.isBundle || false,
+      isBundle:     s.isBundle    || false,
       bundleItems:  s.bundleItems || [],
     }));
     setSpecSearch(s.spec);
@@ -85,17 +88,19 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   }
 
   function clearSpec() {
-    setForm(f => ({ ...f, category:"", spec:"", specId:"", listPrice:"", overseasPrice:null, dc:"", manualPrice:false, unitPrice:"", details:[] }));
+    setForm(f => ({ ...f, category:"", spec:"", specId:"", listPrice:"", overseasPrice:null, dc:"", manualPrice:false, unitPrice:"", details:[], isBundle:false, bundleItems:[] }));
     setSpecSearch("");
     setTimeout(() => searchRef.current?.focus(), 50);
   }
 
   const calc = useMemo(() => calcItem(form), [form]);
   function set(key, val) { setForm(f => ({ ...f, [key]: val })); }
+
+  // handleSave — isBundle, bundleItems 반드시 포함
   function handleSave() {
     onSave({
       ...calc,
-      isBundle:    form.isBundle || false,
+      isBundle:    form.isBundle    || false,
       bundleItems: form.bundleItems || [],
     });
     onClose();
@@ -104,7 +109,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   const inputStyle = { width:"100%", padding:"9px 12px", border:"1px solid var(--border)", borderRadius:6, fontSize:14, fontFamily:"inherit", outline:"none" };
   const labelStyle = { fontSize:12, fontWeight:600, color:"var(--text-sub)", display:"block", marginBottom:5 };
 
-  // 참고 금액 표시 (회색 작은 텍스트)
   const RefPrice = ({ label, value }) => (
     <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:3 }}>
       {label}: <span style={{ fontWeight:600 }}>{value}</span>
@@ -158,12 +162,23 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                     onMouseEnter={e => e.currentTarget.style.background="#F5F7FF"}
                     onMouseLeave={e => e.currentTarget.style.background="#fff"}>
                     <div>
-                      <div style={{ fontWeight:700, fontSize:14 }}>{s.spec}</div>
+                      <div style={{ fontWeight:700, fontSize:14, display:"flex", alignItems:"center", gap:6 }}>
+                        {s.spec}
+                        {s.isBundle && <span style={{fontSize:10,background:"#EBF3FD",color:"#185FA5",padding:"1px 6px",borderRadius:10,fontWeight:600}}>번들</span>}
+                      </div>
                       <div style={{ fontSize:12, color:"var(--text-muted)", marginTop:2 }}>
                         {s.catName}
                         {!s.isShared && <span style={{ marginLeft:6, background:"#FEF9C3", color:"#854D0E", padding:"1px 6px", borderRadius:4, fontSize:10 }}>내 품목</span>}
                       </div>
-                      {s.details?.length > 0 && <div style={{ fontSize:11, color:"#999", marginTop:3 }}>{s.details.slice(0,2).join(" · ")}{s.details.length>2 && ` 외 ${s.details.length-2}개`}</div>}
+                      {s.isBundle && s.bundleItems?.length > 0 ? (
+                        <div style={{ fontSize:11, color:"#059669", marginTop:2 }}>
+                          ₩{(s.listPrice||0).toLocaleString("ko-KR")} ({s.bundleItems.length}개 구성품 합산)
+                        </div>
+                      ) : s.details?.length > 0 && (
+                        <div style={{ fontSize:11, color:"#999", marginTop:3 }}>
+                          {s.details.slice(0,2).join(" · ")}{s.details.length>2 && ` 외 ${s.details.length-2}개`}
+                        </div>
+                      )}
                     </div>
                     <div style={{ textAlign:"right" }}>
                       {isOverseas ? (
@@ -214,7 +229,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                 {isOverseas ? "해외단가 List Price (USD)" : "소비자가 List Price (KRW)"}
               </label>
               {isOverseas ? (
-                // 해외: USD 입력 (= overseasPrice)
                 <>
                   <div style={{ position:"relative" }}>
                     <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#059669", fontWeight:700, fontSize:14 }}>$</span>
@@ -236,7 +250,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                   )}
                 </>
               ) : (
-                // 국내: KRW 입력
                 <input
                   value={form.listPrice !== "" ? fmtNumber(form.listPrice) : ""}
                   onChange={e => { const v=e.target.value.replace(/[^0-9.-]/g,""); set("listPrice",v); if(!form.manualPrice) set("unitPrice",v); }}
@@ -245,7 +258,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
               )}
             </div>
 
-            {/* DC율 (국내만) */}
+            {/* DC율 */}
             <div>
               <label style={labelStyle}>DC율 (%)</label>
               <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -254,7 +267,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                     const dc = e.target.value;
                     set("dc", dc);
                     set("manualPrice", false);
-                    // 해외: overseasPrice 기반 DC 적용
                     if (isOverseas && form.overseasPrice && dc !== "") {
                       const discounted = Number(form.overseasPrice) * (1 - Number(dc)/100);
                       set("unitPrice", Math.round(discounted * 100) / 100);
@@ -271,7 +283,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
             </div>
           </div>
 
-          {/* 단가 / 비고 */}
+          {/* 단가 / 번들내역 / 비고 */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
             <div>
               <label style={labelStyle}>
@@ -279,7 +291,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                 {form.manualPrice && !isOverseas && <span style={{ marginLeft:6, color:"var(--accent)", fontSize:11 }}>수기 입력됨</span>}
               </label>
               {isOverseas ? (
-                // 해외: USD 단가 (= overseasPrice와 동일)
                 <>
                   <div style={{ position:"relative" }}>
                     <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#059669", fontWeight:700, fontSize:14 }}>$</span>
@@ -291,7 +302,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                       style={{ ...inputStyle, textAlign:"right", paddingLeft:22, color:"#059669", fontWeight:600 }}
                     />
                   </div>
-                  {/* 하단: 환율 적용 KRW 참고금액 */}
                   {form.unitPrice != null && form.unitPrice !== "" && (
                     <RefPrice
                       label={`₩${fmtNumber(rate)}/USD 환율 기준`}
@@ -300,42 +310,42 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                   )}
                 </>
               ) : (
-                // 국내: KRW 단가 (마이너스 입력 허용)
-                <>
-                  <input
-                    value={form.manualPrice
-                      ? (form.unitPrice ?? "")
-                      : (calc.unitPrice ? fmtNumber(calc.unitPrice) : "")}
-                    onChange={e => {
-                      const v = e.target.value.replace(/[^0-9,.\-]/g, "");
-                      set("unitPrice", v);
-                      set("manualPrice", true);
-                      set("dc", "");
-                    }}
-                    placeholder="단가를 직접 입력하거나 DC율로 자동 계산"
-                    style={{ ...inputStyle, textAlign:"right",
-                      color: form.manualPrice ? "var(--accent)" : form.dc ? "var(--success)" : "inherit",
-                      fontWeight: form.manualPrice || form.dc ? 600 : 400 }}/>
-                </>
+                <input
+                  value={form.manualPrice
+                    ? (form.unitPrice ?? "")
+                    : (calc.unitPrice ? fmtNumber(calc.unitPrice) : "")}
+                  onChange={e => {
+                    const v = e.target.value.replace(/[^0-9,.\-]/g, "");
+                    set("unitPrice", v);
+                    set("manualPrice", true);
+                    set("dc", "");
+                  }}
+                  placeholder="단가를 직접 입력하거나 DC율로 자동 계산"
+                  style={{ ...inputStyle, textAlign:"right",
+                    color: form.manualPrice ? "var(--accent)" : form.dc ? "var(--success)" : "inherit",
+                    fontWeight: form.manualPrice || form.dc ? 600 : 400 }}/>
               )}
             </div>
+
+            {/* 번들 구성품 내역 — gridColumn 1/-1 로 전체 너비 */}
             {form.isBundle && form.bundleItems?.length > 0 && (
               <div style={{gridColumn:"1 / -1"}}>
                 <label style={labelStyle}>번들 구성품 내역</label>
                 <div style={{border:"0.5px solid var(--border)",borderRadius:6,overflow:"hidden",fontSize:12}}>
                   {form.bundleItems.map((b,i)=>{
                     const baseAmt = (Number(b.qty)||1)*(Number(b.unitPrice)||0);
-                    const nego = Number(b.nego||0);
-                    const finalAmt = nego > 0 ? Math.round(baseAmt*(1-nego/100)) : baseAmt;
+                    const nego    = Number(b.nego||0);
+                    const finalAmt= nego > 0 ? Math.round(baseAmt*(1-nego/100)) : baseAmt;
                     return (
-                    <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 10px",borderBottom:"0.5px solid var(--border)",background:i%2===0?"var(--surface-1)":"transparent"}}>
-                      <span style={{color:"var(--text-secondary)"}}>{b.name}{Number(b.qty)>1?` ×${b.qty}`:""}</span>
-                      <span style={{color:"var(--text-primary)",fontWeight:500}}>
-                        ₩{finalAmt.toLocaleString("ko-KR")}
-                        {nego>0&&<span style={{fontSize:10,color:"#e07000",marginLeft:4}}>NEGO {nego}%</span>}
-                      </span>
-                    </div>
-                  );})}
+                      <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 10px",borderBottom:"0.5px solid var(--border)",background:i%2===0?"var(--surface-1)":"transparent"}}>
+                        <span style={{color:"var(--text-secondary)"}}>{b.name}{Number(b.qty)>1?` ×${b.qty}`:""}</span>
+                        <span style={{color:"var(--text-primary)",fontWeight:500}}>
+                          ₩{finalAmt.toLocaleString("ko-KR")}
+                          {nego>0&&<span style={{fontSize:10,color:"#e07000",marginLeft:4}}>NEGO {nego}%</span>}
+                        </span>
+                      </div>
+                    );
+                  })}
                   <div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",fontWeight:600,background:"var(--surface-1)"}}>
                     <span>합산 단가</span>
                     <span style={{color:"var(--text-accent)"}}>₩{form.bundleItems.reduce((s,b)=>{
@@ -347,6 +357,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                 </div>
               </div>
             )}
+
             <div>
               <label style={labelStyle}>비고</label>
               <input value={form.note} onChange={e => set("note", e.target.value)}
