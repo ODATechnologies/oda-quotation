@@ -448,7 +448,11 @@ function SpecForm({ initial, onSave, onClose, allSpecs=[] }) {
     initial.bundleItems?.length ? initial.bundleItems
     : [{ name:"", qty:1, unitPrice:0 }]
   );
-  const bundleTotal = bundleItems.reduce((s,b) => s + (Number(b.qty)||0)*(Number(b.unitPrice)||0), 0);
+  const bundleTotal = bundleItems.reduce((s,b) => {
+    const base = (Number(b.qty)||1) * (Number(b.unitPrice)||0);
+    const nego = Number(b.nego||0);
+    return s + (nego > 0 ? Math.round(base*(1-nego/100)) : base);
+  }, 0);
   function addBundleItem() { setBundleItems(p=>[...p,{name:"",qty:1,unitPrice:0}]); }
   function removeBundleItem(i) { setBundleItems(p=>p.filter((_,idx)=>idx!==i)); }
   function updateBundle(i,k,v) { setBundleItems(p=>p.map((b,idx)=>idx===i?{...b,[k]:v}:b)); }
@@ -569,8 +573,8 @@ function SpecForm({ initial, onSave, onClose, allSpecs=[] }) {
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,marginBottom:8}}>
           <thead>
             <tr>
-              {["구성품명","수량","단가 (KRW)","금액",""].map((h,i)=>(
-                <th key={i} style={{textAlign:i>=1&&i<=3?"right":"left",fontSize:11,fontWeight:500,color:"var(--text-muted)",padding:"4px 8px",borderBottom:"0.5px solid var(--border)"}}>{h}</th>
+              {["구성품명","수량","단가 (KRW)","NEGO율(%)","금액",""].map((h,i)=>(
+                <th key={i} style={{textAlign:i>=1&&i<=4?"right":"left",fontSize:11,fontWeight:500,color:"var(--text-muted)",padding:"4px 8px",borderBottom:"0.5px solid var(--border)"}}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -614,8 +618,23 @@ function SpecForm({ initial, onSave, onClose, allSpecs=[] }) {
                     onChange={e=>updateBundle(i,"unitPrice",e.target.value.replace(/,/g,""))}
                     style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,textAlign:"right",fontFamily:"inherit"}}/>
                 </td>
-                <td style={{padding:"5px 8px",textAlign:"right",color:"var(--text-secondary)",fontSize:12,width:110}}>
-                  {((Number(b.qty)||0)*(Number(b.unitPrice)||0)).toLocaleString("ko-KR")}
+                <td style={{padding:"5px 4px",width:70}}>
+                  <div style={{display:"flex",alignItems:"center",gap:2}}>
+                    <input type="number" min="0" max="100" step="0.1"
+                      value={b.nego||""}
+                      onChange={e=>updateBundle(i,"nego",e.target.value)}
+                      placeholder="0"
+                      style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,textAlign:"right",fontFamily:"inherit",color:"#e07000"}}/>
+                    <span style={{fontSize:11,color:"var(--text-muted)",flexShrink:0}}>%</span>
+                  </div>
+                </td>
+                <td style={{padding:"5px 8px",textAlign:"right",fontSize:12,width:110}}>
+                  {(()=>{
+                    const base=(Number(b.qty)||1)*(Number(b.unitPrice)||0);
+                    const nego=Number(b.nego||0);
+                    const final=nego>0?Math.round(base*(1-nego/100)):base;
+                    return <span style={{color:nego>0?"#e07000":"var(--text-secondary)",fontWeight:nego>0?600:400}}>{final.toLocaleString("ko-KR")}</span>;
+                  })()}
                 </td>
                 <td style={{padding:"5px 4px",width:24,textAlign:"center"}}>
                   {bundleItems.length>1&&<button type="button" onClick={()=>removeBundleItem(i)}

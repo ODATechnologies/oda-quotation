@@ -197,7 +197,29 @@ td.c{text-align:center;}td.r{text-align:right;}td.b{font-weight:700;}
       <td class="r">${fmtNumber(item.vat)}</td>
       <td>${item.note||''}</td>
     </tr>
-    ${(item.details||[]).map(d=>`<tr class="detail-row"><td></td><td colspan="7">- ${d}</td></tr>`).join('')}
+    ${(() => {
+      let rows = "";
+      // 번들 구성품 목록
+      if (item.isBundle && item.bundleItems?.length > 0) {
+        rows += `<tr class="detail-row"><td></td><td colspan="7" style="padding-top:5px;padding-bottom:2px;font-weight:700;color:#444;font-size:7.5px;border-bottom:1px dashed #ddd;">▸ 구성품 내역</td></tr>`;
+        rows += item.bundleItems.map(b => {
+          const baseAmt = (Number(b.qty)||1) * (Number(b.unitPrice)||0);
+          const nego = Number(b.nego||0);
+          const finalAmt = nego > 0 ? Math.round(baseAmt * (1 - nego/100)) : baseAmt;
+          const negoStr = nego > 0 ? ` <span style="color:#e07000">(NEGO ${nego}%)</span>` : "";
+          return `<tr class="detail-row"><td></td><td colspan="7">&nbsp;&nbsp;· ${b.name}${Number(b.qty)>1?" ×"+b.qty:""} &nbsp;<span style="color:#888;">₩${finalAmt.toLocaleString("ko-KR")}${negoStr}</span></td></tr>`;
+        }).join("");
+      }
+      // 상세사양
+      const details = item.details || [];
+      if (details.length > 0) {
+        if (item.isBundle) {
+          rows += `<tr class="detail-row"><td></td><td colspan="7" style="padding-top:5px;padding-bottom:2px;font-weight:700;color:#444;font-size:7.5px;border-bottom:1px dashed #ddd;border-top:1px dashed #eee;">▸ 상세 사양</td></tr>`;
+        }
+        rows += details.map(d=>`<tr class="detail-row"><td></td><td colspan="7">- ${d}</td></tr>`).join("");
+      }
+      return rows;
+    })()}
     `).join('')}
   </tbody>
 </table>
