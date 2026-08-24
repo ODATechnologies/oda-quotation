@@ -414,11 +414,21 @@ const DETAIL_TAGS = [
 ];
 
 function SpecForm({ initial, onSave, onClose }) {
+  const [activeTab, setActiveTab] = useState("basic");
   const [spec,          setSpec]         = useState(initial.spec || "");
   const [listPrice,     setListPrice]    = useState(initial.listPrice || "");
   const [overseasPrice, setOverseasPrice]= useState(
     initial.overseasPrice != null ? String(initial.overseasPrice) : ""
   );
+  const [isBundle,      setIsBundle]     = useState(initial.isBundle || false);
+  const [bundleItems,   setBundleItems]  = useState(
+    initial.bundleItems?.length ? initial.bundleItems
+    : [{ name:"", qty:1, unitPrice:0 }]
+  );
+  const bundleTotal = bundleItems.reduce((s,b) => s + (Number(b.qty)||0)*(Number(b.unitPrice)||0), 0);
+  function addBundleItem() { setBundleItems(p=>[...p,{name:"",qty:1,unitPrice:0}]); }
+  function removeBundleItem(i) { setBundleItems(p=>p.filter((_,idx)=>idx!==i)); }
+  function updateBundle(i,k,v) { setBundleItems(p=>p.map((b,idx)=>idx===i?{...b,[k]:v}:b)); }
   // detailItems: [{text, tag}] 배열
   const [detailItems, setDetailItems] = useState(() => {
     const details = initial.details || [];
@@ -437,34 +447,69 @@ function SpecForm({ initial, onSave, onClose }) {
   function updateDetail(i, key, val) { setDetailItems(p => p.map((d,idx)=>idx===i?{...d,[key]:val}:d)); }
 
   function handleSave() {
-    // 태그를 접두어로 저장: [domestic], [overseas], 공통은 그대로
     const details = detailItems
       .filter(d => d.text.trim())
       .map(d => d.tag === "common" ? d.text.trim() : `[${d.tag}]${d.text.trim()}`);
     const op = overseasPrice.trim();
+    // 번들이면 listPrice를 합산금액으로 자동 설정
+    const finalPrice = isBundle ? bundleTotal : Number(String(listPrice).replace(/,/g,""));
     onSave({
       spec,
-      listPrice:     Number(String(listPrice).replace(/,/g,"")),
+      listPrice:     finalPrice,
       overseasPrice: op !== "" ? Number(op) : null,
       details,
+      isBundle,
+      bundleItems:   isBundle ? bundleItems.filter(b=>b.name.trim()) : [],
     });
   }
 
   const fmtKRW = (v) => v !== "" ? Number(String(v).replace(/,/g,"")).toLocaleString("ko-KR") : "";
 
+  const TABS = [["basic","기본 정보"],["bundle","번들 구성품"],["detail","상세 사양"]];
   return (<>
-    <div className="form-grid" style={{gap:12}}>
+    {/* 탭 */}
+    <div style={{display:"flex",borderBottom:"0.5px solid var(--border)",marginBottom:14,gap:0}}>
+      {TABS.map(([v,label])=>(
+        <button key={v} onClick={()=>setActiveTab(v)} style={{
+          padding:"7px 16px",border:"none",background:"none",cursor:"pointer",
+          fontFamily:"inherit",fontSize:13,
+          color: activeTab===v?"var(--text-accent)":"var(--text-secondary)",
+          borderBottom: activeTab===v?"2px solid var(--border-accent)":"2px solid transparent",
+          fontWeight: activeTab===v?500:400, marginBottom:-1,
+        }}>
+          {label}
+          {v==="bundle" && isBundle && <span style={{marginLeft:4,fontSize:10,background:"var(--bg-accent)",color:"var(--text-accent)",padding:"1px 6px",borderRadius:10}}>ON</span>}
+        </button>
+      ))}
+    </div>
+
+    {/* 기본 정보 탭 */}
+    {activeTab==="basic" && <div className="form-grid" style={{gap:12}}>
       <div className="form-group" style={{gridColumn:"1 / -1"}}>
         <label>규격명</label>
-        <input value={spec} onChange={e=>setSpec(e.target.value)} placeholder="예: EX80-22.5" autoFocus/>
+        <input value={spec} onChange={e=>setSpec(e.target.value)} placeholder="예: 1CH 충방전 시스템" autoFocus/>
+      </div>
+      <div className="form-group" style={{gridColumn:"1 / -1"}}>
+        <label style={{display:"flex",alignItems:"center",gap:8}}>
+          번들(Bundle) 품목
+          <label style={{display:"flex",alignItems:"center",gap:4,fontWeight:400,cursor:"pointer"}}>
+            <input type="checkbox" checked={isBundle} onChange={e=>setIsBundle(e.target.checked)} style={{width:14,height:14}}/>
+            <span style={{fontSize:12,color:"var(--text-secondary)"}}>활성화 (구성품 합산 단가 자동 계산)</span>
+          </label>
+        </label>
       </div>
       <div className="form-group">
         <label>소비자가 (KRW, 원)</label>
-        <input
-          value={fmtKRW(listPrice)}
-          onChange={e=>setListPrice(e.target.value.replace(/,/g,""))}
-          placeholder="100,000,000"
-          style={{textAlign:"right"}}/>
+        {isBundle
+          ? <div style={{padding:"8px 10px",background:"var(--surface-1)",border:"1px solid var(--border)",borderRadius:6,fontSize:13,textAlign:"right",fontWeight:600,color:"var(--text-accent)"}}>
+              ₩{bundleTotal.toLocaleString("ko-KR")} <span style={{fontSize:11,fontWeight:400,color:"var(--text-muted)"}}>구성품 합산 자동 계산</span>
+            </div>
+          : <input
+              value={fmtKRW(listPrice)}
+              onChange={e=>setListPrice(e.target.value.replace(/,/g,""))}
+              placeholder="100,000,000"
+              style={{textAlign:"right"}}/>
+        }
         <div style={{fontSize:11,color:"var(--text-muted)",marginTop:3}}>국내 견적 시 사용</div>
       </div>
       <div className="form-group">
@@ -484,8 +529,65 @@ function SpecForm({ initial, onSave, onClose }) {
           </div>
         )}
       </div>
+    </div>}
 
-      {/* 상세 사양 + 태그 */}
+    {/* 번들 구성품 탭 */}
+    {activeTab==="bundle" && <div>
+      {!isBundle && (
+        <div style={{background:"var(--bg-warning)",border:"0.5px solid var(--border-warning)",borderRadius:8,padding:"10px 14px",fontSize:13,color:"var(--text-warning)",marginBottom:14}}>
+          기본 정보 탭에서 번들을 활성화해주세요.
+        </div>
+      )}
+      {isBundle && <>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <span style={{fontSize:12,fontWeight:500,color:"var(--text-secondary)"}}>구성품 목록</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={addBundleItem}>+ 항목 추가</button>
+        </div>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:13,marginBottom:8}}>
+          <thead>
+            <tr>
+              {["구성품명","수량","단가 (KRW)","금액",""].map((h,i)=>(
+                <th key={i} style={{textAlign:i>=1&&i<=3?"right":"left",fontSize:11,fontWeight:500,color:"var(--text-muted)",padding:"4px 8px",borderBottom:"0.5px solid var(--border)"}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {bundleItems.map((b,i)=>(
+              <tr key={i} style={{borderBottom:"0.5px solid var(--border)"}}>
+                <td style={{padding:"5px 4px"}}>
+                  <input value={b.name} onChange={e=>updateBundle(i,"name",e.target.value)}
+                    placeholder="예: EX50-72 (파워서플라이)"
+                    style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,fontFamily:"inherit"}}/>
+                </td>
+                <td style={{padding:"5px 4px",width:60}}>
+                  <input type="number" value={b.qty} onChange={e=>updateBundle(i,"qty",e.target.value)}
+                    style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,textAlign:"right",fontFamily:"inherit"}}/>
+                </td>
+                <td style={{padding:"5px 4px",width:120}}>
+                  <input value={Number(b.unitPrice).toLocaleString("ko-KR")}
+                    onChange={e=>updateBundle(i,"unitPrice",e.target.value.replace(/,/g,""))}
+                    style={{width:"100%",padding:"4px 6px",border:"0.5px solid var(--border)",borderRadius:4,fontSize:12,textAlign:"right",fontFamily:"inherit"}}/>
+                </td>
+                <td style={{padding:"5px 8px",textAlign:"right",color:"var(--text-secondary)",fontSize:12,width:100}}>
+                  {((Number(b.qty)||0)*(Number(b.unitPrice)||0)).toLocaleString("ko-KR")}
+                </td>
+                <td style={{padding:"5px 4px",width:24,textAlign:"center"}}>
+                  {bundleItems.length>1&&<button type="button" onClick={()=>removeBundleItem(i)}
+                    style={{background:"none",border:"none",cursor:"pointer",color:"var(--text-muted)",fontSize:16,padding:0,lineHeight:1}}>✕</button>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",gap:10,padding:"8px",borderTop:"1px solid var(--border-strong)"}}>
+          <span style={{fontSize:12,color:"var(--text-secondary)"}}>1CH 기준 합산 단가</span>
+          <span style={{fontSize:16,fontWeight:500,color:"var(--text-accent)"}}>₩{bundleTotal.toLocaleString("ko-KR")}</span>
+        </div>
+      </>}
+    </div>}
+
+    {/* 상세 사양 탭 */}
+    {activeTab==="detail" && <div>
       <div className="form-group" style={{gridColumn:"1 / -1"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
           <label style={{marginBottom:0}}>상세 사양</label>
@@ -526,7 +628,8 @@ function SpecForm({ initial, onSave, onClose }) {
           💡 공통: 국내·해외 모두 표시 &nbsp;|&nbsp; 국내전용: 국내 견적에만 &nbsp;|&nbsp; 해외전용: 해외 견적에만
         </div>
       </div>
-    </div>
+    </div>}
+
     <div className="modal-footer">
       <button className="btn btn-secondary" onClick={onClose}>취소</button>
       <button className="btn btn-primary" onClick={handleSave}>저장</button>

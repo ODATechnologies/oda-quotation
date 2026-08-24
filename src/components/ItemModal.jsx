@@ -65,6 +65,7 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
 
   function selectSpec(s) {
     const hasOverseas = isOverseas && s.overseasPrice != null && s.overseasPrice !== 0;
+    // 번들이면 listPrice가 이미 합산금액
     setForm(f => ({
       ...f,
       category:     s.catName,
@@ -76,6 +77,8 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
       manualPrice:  false,
       unitPrice:    hasOverseas ? s.overseasPrice : s.listPrice,
       details:      filterDetails(s.details, isOverseas),
+      isBundle:     s.isBundle || false,
+      bundleItems:  s.bundleItems || [],
     }));
     setSpecSearch(s.spec);
     setShowDrop(false);
@@ -309,6 +312,23 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
                 </>
               )}
             </div>
+            {form.isBundle && form.bundleItems?.length > 0 && (
+              <div style={{gridColumn:"1 / -1"}}>
+                <label style={labelStyle}>번들 구성품 내역</label>
+                <div style={{border:"0.5px solid var(--border)",borderRadius:6,overflow:"hidden",fontSize:12}}>
+                  {form.bundleItems.map((b,i)=>(
+                    <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"5px 10px",borderBottom:"0.5px solid var(--border)",background:i%2===0?"var(--surface-1)":"transparent"}}>
+                      <span style={{color:"var(--text-secondary)"}}>{b.name} {b.qty>1?`×${b.qty}`:""}</span>
+                      <span style={{color:"var(--text-primary)",fontWeight:500}}>₩{((Number(b.qty)||0)*(Number(b.unitPrice)||0)).toLocaleString("ko-KR")}</span>
+                    </div>
+                  ))}
+                  <div style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",fontWeight:600,background:"var(--surface-1)"}}>
+                    <span>합산 단가</span>
+                    <span style={{color:"var(--text-accent)"}}>₩{form.bundleItems.reduce((s,b)=>s+(Number(b.qty)||0)*(Number(b.unitPrice)||0),0).toLocaleString("ko-KR")}</span>
+                  </div>
+                </div>
+              </div>
+            )}
             <div>
               <label style={labelStyle}>비고</label>
               <input value={form.note} onChange={e => set("note", e.target.value)}
