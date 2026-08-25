@@ -7,7 +7,7 @@ import { exportToExcel } from "../utils/exportExcel";
 import { exportToPdf }         from "../utils/exportPdf";
 import { exportToPdfOverseas } from "../utils/exportPdfOverseas";
 import OverseasQuotationForm, { BANK_INFO_DEFAULT } from "./OverseasQuotationForm";
-import { saveQuote, getHistoryByCustomer } from "../utils/historyStore";
+import { saveQuote, getHistoryByCustomer, getAllHistory } from "../utils/historyStore";
 import { useSharedProducts } from "../hooks/useSharedData";
 import { useAuth } from "../contexts/AuthContext";
 import ItemRow           from "./ItemRow";
@@ -54,6 +54,8 @@ export default function QuotationPage({ showToast }) {
   const [date,          setDate]          = useState(todayStr());
   const [staffId,       setStaffId]       = useState("");
   const [custId,        setCustId]        = useState("");
+  const [custSearch,    setCustSearch]    = useState("");
+  const [custDropOpen,  setCustDropOpen]  = useState(false);
   const [contactIdx,    setContactIdx]    = useState(0);
   const [manualMode,    setManualMode]    = useState(false);
   const [manualCompany, setManualCompany] = useState("");
@@ -103,7 +105,14 @@ export default function QuotationPage({ showToast }) {
   async function loadHistory(name) {
     if (!name) { setCustomerHistory([]); return; }
     setHistLoading(true);
-    try { setCustomerHistory(await getHistoryByCustomer(name)); }
+    try {
+      // 전체 이력에서 클라이언트 필터링 (대소문자/공백 무관)
+      const all = await getAllHistory();
+      const filtered = all.filter(h =>
+        h.customer?.replace(/\s/g,"").toLowerCase() === name.replace(/\s/g,"").toLowerCase()
+      );
+      setCustomerHistory(filtered);
+    }
     catch(e) { console.error(e); }
     setHistLoading(false);
   }
@@ -228,7 +237,7 @@ export default function QuotationPage({ showToast }) {
   function handleReset() {
     if (!confirm("작성 내용을 초기화하시겠습니까?")) return;
     setDate(todayStr()); setMode("domestic"); setExchangeRate(1350);
-    setCustId(""); setContactIdx(0); setManualMode(false);
+    setCustId(""); setContactIdx(0); setManualMode(false); setCustSearch(""); setCustDropOpen(false);
     setManualCompany(""); setManualContact({name:"",phone:"",email:""});
     setTerms(DEFAULT_TERMS); setItems([]); setNextId(1); setFixedDocNo(null); setMemo(""); setMemoColor("#111111");
   }
