@@ -43,7 +43,7 @@ export default function QuotationPage({ showToast }) {
     });
     return unsub;
   }, []);
-  const [seqMap, setSeqMap] = useState(() => loadLS("oda_seq", {}));
+  const [todayHistory, setTodayHistory] = useState([]);
 
   // ── 견적 모드: "domestic" | "overseas"
   const [mode, setMode] = useState("domestic");
@@ -119,12 +119,25 @@ export default function QuotationPage({ showToast }) {
   useEffect(() => { loadHistory(customerName); }, [customerName]);
 
   const autoDocNo = useMemo(() => {
-    const custKey = customerName.replace(/\s/g,"") || "UNKNOWN";
-    return generateDocNo(date ? new Date(date) : new Date(), custKey, seqMap);
-  }, [date, customerName, seqMap]);
+    const d = date ? new Date(date) : new Date();
+    const yy = String(d.getFullYear()).slice(2);
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    const prefix = `ODA-GQ${yy}${mm}${dd}`;
+    // Firestore 당일 이력에서 최대 순번 계산
+    const maxSeq = todayHistory.reduce((max, h) => {
+      if (h.docNo && h.docNo.startsWith(prefix)) {
+        const num = parseInt(h.docNo.slice(prefix.length, prefix.length+3), 10);
+        return isNaN(num) ? max : Math.max(max, num);
+      }
+      return max;
+    }, 0);
+    const seq = maxSeq + 1;
+    const docNo = `${prefix}${String(seq).padStart(3,"0")}D`;
+    return { docNo, seq };
+  }, [date, todayHistory]);
 
-  const docNo      = fixedDocNo || autoDocNo.docNo;
-  const { dateKey, seq } = autoDocNo;
+  const docNo = fixedDocNo || autoDocNo.docNo;
 
   // 계산된 품목
   const calcedItems = useMemo(() => items.map(item => {
@@ -192,21 +205,13 @@ export default function QuotationPage({ showToast }) {
     };
   }
 
-  function confirmSeq() {
-    setSeqMap(prev => {
-      const next = { ...prev, [dateKey]:seq };
-      localStorage.setItem("oda_seq", JSON.stringify(next));
-      return next;
-    });
-  }
-
   function handleSave() {
     if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
     const saved = buildExportData();
     saveQuote(saved);
-    confirmSeq();
     showToast(`✅ [${saved.docNo}] 견적이 저장되었습니다.`, "success");
-    // 저장 후 초기화
+    // 저장 후 당일 이력 갱신 → 다음 순번 자동 반영
+    loadTodayHistory();
     setTimeout(() => handleReset(), 300);
   }
 
