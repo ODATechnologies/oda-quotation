@@ -228,7 +228,7 @@ export default function QuotationPage({ showToast }) {
     setFixedDocNo(record.docNo);
     if (record.mode) setMode(record.mode);
     if (record.exchangeRate) setExchangeRate(record.exchangeRate);
-    const restoredItems = (record.items||[]).map((item,i)=>({...item,id:i+1,manualPrice:true}));
+    const restoredItems = (record.items||[]).map((item,i)=>({...item, id:i+1}));
     setItems(restoredItems);
     setNextId(restoredItems.length+1);
     showToast(`[${record.docNo}] 견적을 불러왔습니다.`, "success");
