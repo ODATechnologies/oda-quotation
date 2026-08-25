@@ -202,10 +202,12 @@ export default function QuotationPage({ showToast }) {
 
   function handleSave() {
     if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
-    saveQuote(buildExportData());
+    const saved = buildExportData();
+    saveQuote(saved);
     confirmSeq();
-    loadHistory(customerName);
-    showToast(`✅ [${docNo}] 견적이 저장되었습니다.`, "success");
+    showToast(`✅ [${saved.docNo}] 견적이 저장되었습니다.`, "success");
+    // 저장 후 초기화
+    setTimeout(() => handleReset(), 300);
   }
 
   const handleLoadFromHistory = useCallback((record) => {
