@@ -102,6 +102,19 @@ export default function QuotationPage({ showToast }) {
   const contact  = manualMode ? manualContact : (custObj?.contacts[contactIdx] || { name:"", phone:"", email:"" });
   const customerName = manualMode ? manualCompany : (custObj?.company || "");
 
+  // 당일 이력 로드 (문서번호 순번 계산용)
+  async function loadTodayHistory() {
+    try {
+      const all = await getAllHistory();
+      const d = date ? new Date(date) : new Date();
+      const today = d.toISOString().slice(0,10);
+      const filtered = all.filter(h => h.savedAt && h.savedAt.slice(0,10) === today);
+      setTodayHistory(filtered);
+      return filtered;
+    } catch(e) { return []; }
+  }
+  useEffect(() => { loadTodayHistory(); }, [date]);
+
   async function loadHistory(name) {
     if (!name) { setCustomerHistory([]); return; }
     setHistLoading(true);
@@ -205,14 +218,13 @@ export default function QuotationPage({ showToast }) {
     };
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
     const saved = buildExportData();
-    saveQuote(saved);
+    await saveQuote(saved);                // Firestore 저장 완료 대기
+    await loadTodayHistory();              // 당일 이력 갱신 완료 대기
     showToast(`✅ [${saved.docNo}] 견적이 저장되었습니다.`, "success");
-    // 저장 후 당일 이력 갱신 → 다음 순번 자동 반영
-    loadTodayHistory();
-    setTimeout(() => handleReset(), 300);
+    setTimeout(() => handleReset(), 100); // 순번 갱신 후 초기화
   }
 
   const handleLoadFromHistory = useCallback((record) => {
