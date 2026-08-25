@@ -327,12 +327,41 @@ export default function QuotationPage({ showToast }) {
           <div className="card-body">
             {!manualMode ? (
               <div className="form-grid" style={{ gap:10 }}>
-                <div className="form-group">
+                <div className="form-group" style={{position:"relative"}}>
                   <label>수신 (업체) <span className="required">*</span></label>
-                  <select value={custId} onChange={e=>{ setCustId(e.target.value); setContactIdx(0); }}>
-                    <option value="">-- 업체 선택 --</option>
-                    {customerList.map(c=><option key={c._id||c.id} value={c._id||c.id}>{c.company}</option>)}
-                  </select>
+                  <input
+                    value={custDropOpen
+                      ? custSearch
+                      : (customerList.find(c=>(c._id||c.id)===custId)?.company || "")}
+                    onChange={e=>{ setCustSearch(e.target.value); setCustDropOpen(true); setCustId(""); }}
+                    onFocus={()=>{ setCustSearch(""); setCustDropOpen(true); }}
+                    onBlur={()=>setTimeout(()=>setCustDropOpen(false),200)}
+                    placeholder="업체명 검색 또는 선택..."
+                    style={{width:"100%",padding:"8px 10px",border:"1px solid var(--border)",borderRadius:6,fontSize:13,fontFamily:"inherit",boxSizing:"border-box"}}
+                  />
+                  {custDropOpen && (
+                    <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:200,background:"#fff",border:"1px solid var(--border)",borderRadius:6,boxShadow:"0 4px 16px rgba(0,0,0,.12)",maxHeight:220,overflowY:"auto"}}>
+                      {(custSearch
+                        ? customerList.filter(c=>c.company?.toLowerCase().includes(custSearch.toLowerCase()))
+                        : customerList
+                      ).map(c=>(
+                        <div key={c._id||c.id}
+                          onMouseDown={()=>{ setCustId(c._id||c.id); setContactIdx(0); setCustSearch(""); setCustDropOpen(false); }}
+                          style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:"0.5px solid var(--border)"}}
+                          onMouseEnter={e=>e.currentTarget.style.background="#F5F7FF"}
+                          onMouseLeave={e=>e.currentTarget.style.background=""}>
+                          <div style={{fontWeight:600}}>{c.company}</div>
+                          {c.address && <div style={{fontSize:11,color:"var(--text-muted)",marginTop:1}}>📍 {c.address}</div>}
+                        </div>
+                      ))}
+                      {(custSearch
+                        ? customerList.filter(c=>c.company?.toLowerCase().includes(custSearch.toLowerCase()))
+                        : customerList
+                      ).length === 0 && (
+                        <div style={{padding:"10px 12px",color:"var(--text-muted)",fontSize:12,textAlign:"center"}}>검색 결과가 없습니다.</div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {custObj && (
                   <div className="form-group">
