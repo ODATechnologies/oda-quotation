@@ -261,7 +261,8 @@ export default function QuotationPage({ showToast }) {
     const foundCust = customerList.find(c => c.company===record.customer);
     if (foundCust) {
       setManualMode(false); setCustId(foundCust._id || foundCust.id);
-      const ci = foundCust.contacts.findIndex(c=>c.name===record.contact?.name);
+      const contacts = foundCust.contacts || [];
+      const ci = contacts.findIndex(c=>c.name===record.contact?.name);
       setContactIdx(ci>=0?ci:0);
     } else {
       setManualMode(true);
@@ -274,13 +275,14 @@ export default function QuotationPage({ showToast }) {
     setTerms(record.terms||DEFAULT_TERMS);
     setMemo(record.memo||"");
     setMemoColor(record.memoColor||"#111111");
-    setFixedDocNo(record.docNo);
+    // 재견적 시 새 문서번호를 자동 발급하도록 fixedDocNo는 설정하지 않음
+    setFixedDocNo(null);
     if (record.mode) setMode(record.mode);
     if (record.exchangeRate) setExchangeRate(record.exchangeRate);
     const restoredItems = (record.items||[]).map((item,i)=>({...item, id:i+1}));
     setItems(restoredItems);
     setNextId(restoredItems.length+1);
-    showToast(`[${record.docNo}] 견적을 불러왔습니다.`, "success");
+    showToast(`[${record.docNo}] 견적 내용을 불러왔습니다. (새 문서번호가 발급됩니다)`, "success");
   }, [customerList, staffList, showToast]);
 
   function handleReset() {

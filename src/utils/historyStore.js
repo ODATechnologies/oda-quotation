@@ -75,5 +75,8 @@ export async function getAllHistory() {
 
 // 삭제
 export async function deleteQuote(customer, docNo) {
+  if (!customer || !docNo) {
+    throw new Error(`삭제 실패: customer 또는 docNo가 없습니다. (customer=${customer}, docNo=${docNo})`);
+  }
   await deleteDoc(quoteDoc(customer, docNo));
 }
