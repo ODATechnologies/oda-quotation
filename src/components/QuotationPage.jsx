@@ -131,26 +131,28 @@ export default function QuotationPage({ showToast }) {
   }
   useEffect(() => { loadHistory(customerName); }, [customerName]);
 
-  const autoDocNo = useMemo(() => {
+  // 문서번호 prefix 계산
+  const docPrefix = useMemo(() => {
     const d = date ? new Date(date) : new Date();
     const yy = String(d.getFullYear()).slice(2);
     const mm = String(d.getMonth()+1).padStart(2,"0");
     const dd = String(d.getDate()).padStart(2,"0");
-    const prefix = `ODA-GQ${yy}${mm}${dd}`;
-    // Firestore 당일 이력에서 최대 순번 계산
+    return `ODA-GQ${yy}${mm}${dd}`;
+  }, [date]);
+
+  // 표시용 문서번호: todayHistory 기반 (화면 표시용만)
+  const autoDocNo = useMemo(() => {
     const maxSeq = todayHistory.reduce((max, h) => {
-      if (h.docNo && h.docNo.startsWith(prefix)) {
-        const num = parseInt(h.docNo.slice(prefix.length, prefix.length+3), 10);
+      if (h.docNo && h.docNo.startsWith(docPrefix)) {
+        const num = parseInt(h.docNo.slice(docPrefix.length, docPrefix.length+3), 10);
         return isNaN(num) ? max : Math.max(max, num);
       }
       return max;
     }, 0);
-    const seq = maxSeq + 1;
-    const docNo = `${prefix}${String(seq).padStart(3,"0")}D`;
-    return { docNo, seq };
-  }, [date, todayHistory]);
+    return `${docPrefix}${String(maxSeq+1).padStart(3,"0")}D`;
+  }, [docPrefix, todayHistory]);
 
-  const docNo = fixedDocNo || autoDocNo.docNo;
+  const docNo = fixedDocNo || autoDocNo;
 
   // 계산된 품목
   const calcedItems = useMemo(() => items.map(item => {
@@ -220,11 +222,28 @@ export default function QuotationPage({ showToast }) {
 
   async function handleSave() {
     if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
-    const saved = buildExportData();
-    await saveQuote(saved);                // Firestore 저장 완료 대기
-    await loadTodayHistory();              // 당일 이력 갱신 완료 대기
-    showToast(`✅ [${saved.docNo}] 견적이 저장되었습니다.`, "success");
-    setTimeout(() => handleReset(), 100); // 순번 갱신 후 초기화
+
+    // 저장 직전 Firestore에서 실시간 순번 재계산 (덮어쓰기 방지)
+    const freshAll = await getAllHistory();
+    const today = (date ? new Date(date) : new Date()).toISOString().slice(0,10);
+    const freshMaxSeq = freshAll
+      .filter(h => h.savedAt && h.savedAt.slice(0,10) === today && h.docNo?.startsWith(docPrefix))
+      .reduce((max, h) => {
+        const num = parseInt(h.docNo.slice(docPrefix.length, docPrefix.length+3), 10);
+        return isNaN(num) ? max : Math.max(max, num);
+      }, 0);
+    const freshDocNo = `${docPrefix}${String(freshMaxSeq+1).padStart(3,"0")}D`;
+
+    const exportData = buildExportData();
+    const saved = { ...exportData, docNo: freshDocNo };
+    await saveQuote(saved);
+
+    // 이력 갱신
+    const updated = await loadTodayHistory();
+    setTodayHistory(updated || []);
+
+    showToast(`✅ [${freshDocNo}] 견적이 저장되었습니다.`, "success");
+    setTimeout(() => handleReset(), 150);
   }
 
   const handleLoadFromHistory = useCallback((record) => {
