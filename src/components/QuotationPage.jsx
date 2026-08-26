@@ -378,7 +378,7 @@ export default function QuotationPage({ showToast }) {
             <span className="card-title">CUSTOMER (공급받는자)</span>
             <label style={{ fontSize:12, display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
               <input type="checkbox" checked={manualMode}
-                onChange={e => { setManualMode(e.target.checked); setCustId(""); }}/>
+                onChange={e => { setManualMode(e.target.checked); setCustId(""); setFixedDocNo(null); }}/>
               수기 입력
             </label>
           </div>
@@ -404,7 +404,13 @@ export default function QuotationPage({ showToast }) {
                         : customerList
                       ).map(c=>(
                         <div key={c._id||c.id}
-                          onMouseDown={()=>{ setCustId(c._id||c.id); setContactIdx(0); setCustSearch(""); setCustDropOpen(false); }}
+                          onMouseDown={()=>{
+                            if (fixedDocNo && items.length > 0) {
+                              if (!confirm("다른 업체를 선택하면 불러온 견적 내용이 초기화됩니다.\n계속하시겠습니까?")) return;
+                              setItems([]); setNextId(1); setTerms(DEFAULT_TERMS); setMemo(""); setMemoColor("#111111");
+                            }
+                            setCustId(c._id||c.id); setContactIdx(0); setCustSearch(""); setCustDropOpen(false); setFixedDocNo(null);
+                          }}
                           style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:"0.5px solid var(--border)"}}
                           onMouseEnter={e=>e.currentTarget.style.background="#F5F7FF"}
                           onMouseLeave={e=>e.currentTarget.style.background=""}>
@@ -434,7 +440,7 @@ export default function QuotationPage({ showToast }) {
               </div>
             ) : (
               <div className="form-grid" style={{ gap:10 }}>
-                <div className="form-group"><label>수신 (업체명)</label><input value={manualCompany} onChange={e=>setManualCompany(e.target.value)} placeholder="업체명 입력"/></div>
+                <div className="form-group"><label>수신 (업체명)</label><input value={manualCompany} onChange={e=>{ setManualCompany(e.target.value); setFixedDocNo(null); }} placeholder="업체명 입력"/></div>
                 <div className="form-group"><label>담당자</label><input value={manualContact.name} onChange={e=>setManualContact(p=>({...p,name:e.target.value}))} placeholder="성명/직책"/></div>
                 <div className="form-group"><label>전화</label><input value={manualContact.phone} onChange={e=>setManualContact(p=>({...p,phone:e.target.value}))} placeholder="010-0000-0000"/></div>
                 <div className="form-group"><label>E-mail</label><input value={manualContact.email} onChange={e=>setManualContact(p=>({...p,email:e.target.value}))} placeholder="email@company.com"/></div>
