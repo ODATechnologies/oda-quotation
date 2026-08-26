@@ -2,6 +2,26 @@ import { useState, useEffect } from "react";
 import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
 
+// 업체명 정규화 (법인 형태 표기, 공백, 특수문자 제거 후 비교)
+function normalizeCompany(name) {
+  return (name || "")
+    .replace(/주식회사|㈜|\(주\)|유한회사|㈔|\(사\)/g, "")
+    .replace(/[\s\-_.,]/g, "")
+    .toLowerCase();
+}
+
+// 두 문자열의 유사도 판단 (포함 관계 또는 완전 일치 시 중복 의심)
+function isSimilarCompany(a, b) {
+  const na = normalizeCompany(a);
+  const nb = normalizeCompany(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  // 짧은 쪽이 긴 쪽에 포함되면 의심 (예: "삼호인넷" ⊂ "주식회사삼호인넷")
+  const [shorter, longer] = na.length <= nb.length ? [na, nb] : [nb, na];
+  if (shorter.length >= 2 && longer.includes(shorter)) return true;
+  return false;
+}
+
 export default function CustomerManager({ showToast }) {
   const [list,     setList]     = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -22,6 +42,24 @@ export default function CustomerManager({ showToast }) {
 
   async function saveCompany(data) {
     try {
+      // 신규 등록이거나, 수정 시 업체명이 바뀐 경우 중복 검사
+      const isNew = modal.mode === "add-company";
+      const nameChanged = !isNew && modal.data.company !== data.company;
+      if (isNew || nameChanged) {
+        const excludeId = isNew ? null : modal.data._id;
+        const dup = list.find(c => c._id !== excludeId && isSimilarCompany(c.company, data.company));
+        if (dup) {
+          const proceed = confirm(
+            `이미 등록된 업체와 유사합니다.\n\n` +
+            `등록하려는 업체: "${data.company}"\n` +
+            `기존 등록 업체: "${dup.company}"\n\n` +
+            `동일한 업체입니까? (동일 업체면 취소 후 기존 업체를 이용해주세요)\n\n` +
+            `[확인] = 다른 업체이니 새로 등록\n[취소] = 등록 중단`
+          );
+          if (!proceed) return;
+        }
+      }
+
       if (modal.mode === "add-company") {
         const id = `cust_${Date.now()}`;
         await setDoc(doc(db, "customers", id), {

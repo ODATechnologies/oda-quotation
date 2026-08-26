@@ -75,7 +75,7 @@ export default function QuoteDashboard({ showToast }) {
   };
   const domPeriod = domestic.filter(inPeriod);
   const ovsPeriod = overseas.filter(inPeriod);
-  const domTotal  = domPeriod.reduce((s,h) => s+(Number(h.grandTotal)||0), 0);
+  const domTotal  = domPeriod.reduce((s,h) => s+(Number(h.totalSupply)||0), 0);
   const ovsTotal  = ovsPeriod.reduce((s,h) => s+(Number(h.totalUSD)||0), 0);
   const domCompanies = new Set(domPeriod.map(h=>h.customer)).size;
   const ovsCompanies = new Set(ovsPeriod.map(h=>h.customer)).size;
@@ -203,7 +203,7 @@ export default function QuoteDashboard({ showToast }) {
       {/* 기간별 그룹 목록 */}
       {!loading && periodKeys.map(key => {
         const quotes = grouped[key].sort((a,b) => new Date(b.savedAt)-new Date(a.savedAt));
-        const domAmt = quotes.filter(h=>h.mode!=="overseas").reduce((s,h)=>s+(Number(h.grandTotal)||0),0);
+        const domAmt = quotes.filter(h=>h.mode!=="overseas").reduce((s,h)=>s+(Number(h.totalSupply)||0),0);
         const ovsAmt = quotes.filter(h=>h.mode==="overseas").reduce((s,h)=>s+(Number(h.totalUSD)||0),0);
 
         return (
@@ -218,7 +218,17 @@ export default function QuoteDashboard({ showToast }) {
 
             {/* 테이블 */}
             <div style={{ background:"#fff", border:"0.5px solid var(--border)", borderRadius:12, overflow:"hidden" }}>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13, tableLayout:"fixed" }}>
+                <colgroup>
+                  <col style={{ width:"18%" }}/>{/* 견적번호 */}
+                  <col style={{ width:"6%" }}/>{/* 구분 */}
+                  <col style={{ width:"13%" }}/>{/* 업체명 */}
+                  <col style={{ width:"10%" }}/>{/* 견적 담당자 */}
+                  <col style={{ width:"10%" }}/>{/* 견적일시 */}
+                  <col style={{ width:"23%" }}/>{/* 품목 요약 */}
+                  <col style={{ width:"12%" }}/>{/* 금액 */}
+                  <col style={{ width:"8%" }}/>{/* 관리 */}
+                </colgroup>
                 <thead>
                   <tr>
                     {["견적번호","구분","업체명","견적 담당자","견적일시","품목 요약","금액","관리"].map((h,i) => (
@@ -227,6 +237,7 @@ export default function QuoteDashboard({ showToast }) {
                         fontSize:11, fontWeight:500, color:"var(--text-muted)",
                         borderBottom:"0.5px solid var(--border)",
                         background:"var(--surface-1)",
+                        whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
                         ...(i===7?{textAlign:"center"}:{})
                       }}>{h}</th>
                     ))}
@@ -237,7 +248,7 @@ export default function QuoteDashboard({ showToast }) {
                     const isOvs = h.mode === "overseas";
                     return (
                       <tr key={h.docNo} style={{ borderBottom:"0.5px solid var(--border)" }}>
-                        <td style={{ padding:"10px 14px", color:"#185FA5", fontWeight:500, fontSize:12 }}>{h.docNo}</td>
+                        <td style={{ padding:"10px 14px", color:"#185FA5", fontWeight:500, fontSize:12, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={h.docNo}>{h.docNo}</td>
                         <td style={{ padding:"10px 14px" }}>
                           <span style={{
                             display:"inline-block", fontSize:11, padding:"2px 8px",
@@ -246,19 +257,20 @@ export default function QuoteDashboard({ showToast }) {
                             color: isOvs ? "#0F6E56" : "#185FA5",
                           }}>{isOvs ? "해외" : "국내"}</span>
                         </td>
-                        <td style={{ padding:"10px 14px" }}>{h.customer}</td>
-                        <td style={{ padding:"10px 14px", color:"var(--text-secondary)", fontSize:12 }}>{h.staff?.name||"-"}</td>
+                        <td style={{ padding:"10px 14px", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }} title={h.customer}>{h.customer}</td>
+                        <td style={{ padding:"10px 14px", color:"var(--text-secondary)", fontSize:12, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{h.staff?.name||"-"}</td>
                         <td style={{ padding:"10px 14px", color:"var(--text-muted)", fontSize:12 }}>
                           {h.savedAt ? new Date(h.savedAt).toLocaleDateString("ko-KR") : "-"}
                           <br/>
                           <span style={{fontSize:11}}>{h.savedAt ? new Date(h.savedAt).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}) : ""}</span>
                         </td>
-                        <td style={{ padding:"10px 14px", color:"var(--text-muted)", fontSize:12 }}>
+                        <td style={{ padding:"10px 14px", color:"var(--text-muted)", fontSize:12, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}
+                          title={(h.items||[]).map(i=>`${i.spec||i.category||""}${i.qty>1?` x${i.qty}`:""}`).join(", ")}>
                           {(h.items||[]).slice(0,2).map(i=>`${i.spec||i.category||""}${i.qty>1?` x${i.qty}`:""}`).join(", ")}
                           {(h.items||[]).length>2 && ` 외 ${(h.items||[]).length-2}건`}
                         </td>
-                        <td style={{ padding:"10px 14px", textAlign:"right", fontWeight:500, color: isOvs?"#0F6E56":"var(--text-primary)" }}>
-                          {isOvs ? fmtUSD(h.totalUSD||0) : `₩${fmtNumber(h.grandTotal)}`}
+                        <td style={{ padding:"10px 14px", textAlign:"right", fontWeight:500, color: isOvs?"#0F6E56":"var(--text-primary)", whiteSpace:"nowrap" }}>
+                          {isOvs ? fmtUSD(h.totalUSD||0) : `₩${fmtNumber(h.totalSupply)}`}
                         </td>
                         <td style={{ padding:"10px 14px", textAlign:"center" }}>
                           <div style={{ display:"flex", gap:4, justifyContent:"center" }}>
