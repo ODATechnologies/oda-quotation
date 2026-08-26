@@ -99,20 +99,22 @@ export default function QuotationPage({ showToast }) {
   const supplier = mode === "overseas" ? SUPPLIER_INFO_OVERSEAS : SUPPLIER_INFO;
   const staff    = staffList.find(s => s._id === staffId) || filteredStaff[0] || {};
   const custObj  = customerList.find(c => (c._id || c.id) === custId);
-  const contact  = manualMode ? manualContact : (custObj?.contacts[contactIdx] || { name:"", phone:"", email:"" });
+  const contact  = manualMode ? manualContact : ((custObj?.contacts || [])[contactIdx] || { name:"", phone:"", email:"" });
   const customerName = manualMode ? manualCompany : (custObj?.company || "");
 
   // 당일 이력 로드 (문서번호 순번 계산용)
   async function loadTodayHistory() {
     try {
       const all = await getAllHistory();
+      console.log("[DEBUG] getAllHistory 결과:", all.length, "건", all);
       // savedAt 대신 docNo의 날짜로 필터링 (serverTimestamp 지연 문제 방지)
       const filtered = all.filter(h =>
         h.docNo && h.docNo.includes(`GQ${dateKey}`)
       );
+      console.log("[DEBUG] 오늘(", dateKey, ") 필터링 결과:", filtered.length, "건", filtered);
       setTodayHistory(filtered);
       return filtered;
-    } catch(e) { return []; }
+    } catch(e) { console.error("[DEBUG] loadTodayHistory 오류:", e); return []; }
   }
   useEffect(() => { loadTodayHistory(); }, [date]);
 
