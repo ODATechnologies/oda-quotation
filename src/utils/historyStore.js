@@ -1,5 +1,5 @@
 import {
-  collection, doc, setDoc, getDocs,
+  collection, doc, setDoc, getDocs, getDocsFromServer,
   deleteDoc, serverTimestamp, getDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -48,13 +48,13 @@ export async function getHistoryByCustomer(customerName) {
   }
 }
 
-// 전체 조회 (견적 현황용) - 병렬 조회로 성능 개선
+// 전체 조회 (견적 현황용) - 병렬 조회 + 캐시 우회로 최신 데이터 보장
 export async function getAllHistory() {
   try {
-    const custSnap = await getDocs(collection(db, "quote_history"));
-    // 모든 업체의 서브컬렉션을 병렬로 조회
+    const custSnap = await getDocsFromServer(collection(db, "quote_history"));
+    // 모든 업체의 서브컬렉션을 병렬로 조회 (서버 강제 조회)
     const results = await Promise.all(
-      custSnap.docs.map(custD => getDocs(quotesCol(custD.id)))
+      custSnap.docs.map(custD => getDocsFromServer(quotesCol(custD.id)))
     );
     const all = [];
     results.forEach(quotesSnap => {
