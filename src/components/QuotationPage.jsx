@@ -106,14 +106,15 @@ export default function QuotationPage({ showToast }) {
   async function loadTodayHistory() {
     try {
       const all = await getAllHistory();
-      const d = date ? new Date(date) : new Date();
-      const today = d.toISOString().slice(0,10);
-      const filtered = all.filter(h => h.savedAt && h.savedAt.slice(0,10) === today);
+      // savedAt 대신 docNo의 날짜로 필터링 (serverTimestamp 지연 문제 방지)
+      const filtered = all.filter(h =>
+        h.docNo && h.docNo.includes(`GQ${dateKey}`)
+      );
       setTodayHistory(filtered);
       return filtered;
     } catch(e) { return []; }
   }
-  useEffect(() => { loadTodayHistory(); }, [date]);
+  useEffect(() => { loadTodayHistory(); }, [dateKey]);
 
   async function loadHistory(name) {
     if (!name) { setCustomerHistory([]); return; }
@@ -232,9 +233,8 @@ export default function QuotationPage({ showToast }) {
 
     // 저장 직전 Firestore에서 실시간 순번 재계산 (업체별 독립, 덮어쓰기 방지)
     const freshAll = await getAllHistory();
-    const today = (date ? new Date(date) : new Date()).toISOString().slice(0,10);
     const freshMaxSeq = freshAll
-      .filter(h => h.customer === customerName && h.savedAt?.slice(0,10) === today)
+      .filter(h => h.customer === customerName && h.docNo?.includes(`GQ${dateKey}`))
       .reduce((max, h) => {
         if (!h.docNo) return max;
         const match = h.docNo.match(new RegExp("GQ" + dateKey + "(\d{3})D$"));
