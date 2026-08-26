@@ -8,8 +8,7 @@ function formatDateEn(dateStr) {
 
 export function exportToPdf(data) {
   const { docNo, date, staff, supplier, customer, contact, items, terms, memo, memoColor, totalSupply, totalVat, grandTotal } = data;
-  const shortNo  = docNo.replace("ODA-", "");
-  const fileName = `Quotation for ${customer} ${shortNo}`;
+  const fileName = docNo; // docNo가 이미 "Quotation for 업체명 GQ..." 형식
   const ODA  = "#F84F04";
   const DARK = "#1a1a1a";
 

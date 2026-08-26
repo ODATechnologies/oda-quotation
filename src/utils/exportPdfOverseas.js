@@ -34,7 +34,7 @@ export function exportToPdfOverseas(data) {
     bankInfo         = `Industrial Bank of Korea/Gal San-Yeok Branch\nAccount no. : 483-022203-56-00012\nSwift Code : IBKOKRSE\nBenef'y name : ODA Technologies`,
   } = overseasForm;
 
-  const fileName = `Quotation_${docNo.replace(/[^a-zA-Z0-9]/g,"_")}`;
+  const fileName = docNo; // docNo가 이미 "Quotation for 업체명 GQ..." 형식
   const fmtUSD = (n) => n != null
     ? "$" + Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})
     : "-";
