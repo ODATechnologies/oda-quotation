@@ -155,8 +155,8 @@ export default function QuotationPage({ showToast }) {
     }, 0);
     const seq    = String(maxSeq + 1).padStart(3, "0");
     // 공백 제거, Firestore ID 불가 문자(/ . [ ] * `) 만 언더바로 치환
-    const custDisplay = customerName.replace(/[\s/.\[\]*`]/g,"") || "UNKNOWN";
-    return `Quotation_for_${custDisplay}_GQ${dateKey}${seq}D`;
+    const custDisplay = customerName || "UNKNOWN";
+    return `Quotation for ${custDisplay} GQ${dateKey}${seq}D`;
   }, [dateKey, customerName, todayHistory]);
 
   const docNo = fixedDocNo || autoDocNo;
@@ -241,7 +241,6 @@ export default function QuotationPage({ showToast }) {
       }
       return max;
     }, 0);
-    const custDisplay = customerName.replace(/[\s/.\[\]*`]/g,"") || "UNKNOWN";
     const freshDocNo  = `Quotation for ${customerName} GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
 
     const exportData = buildExportData();
