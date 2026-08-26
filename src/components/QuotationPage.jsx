@@ -7,7 +7,7 @@ import { exportToExcel } from "../utils/exportExcel";
 import { exportToPdf }         from "../utils/exportPdf";
 import { exportToPdfOverseas } from "../utils/exportPdfOverseas";
 import OverseasQuotationForm, { BANK_INFO_DEFAULT } from "./OverseasQuotationForm";
-import { saveQuote, getHistoryByCustomer, getAllHistory } from "../utils/historyStore";
+import { saveQuote, getHistoryByCustomer } from "../utils/historyStore";
 import { useSharedProducts } from "../hooks/useSharedData";
 import { useAuth } from "../contexts/AuthContext";
 import ItemRow           from "./ItemRow";
@@ -43,7 +43,7 @@ export default function QuotationPage({ showToast }) {
     });
     return unsub;
   }, []);
-  const [todayHistory, setTodayHistory] = useState([]);
+  // (todayHistory 제거 - customerHistory로 대체)
 
   // ── 견적 모드: "domestic" | "overseas"
   const [mode, setMode] = useState("domestic");
@@ -102,31 +102,13 @@ export default function QuotationPage({ showToast }) {
   const contact  = manualMode ? manualContact : ((custObj?.contacts || [])[contactIdx] || { name:"", phone:"", email:"" });
   const customerName = manualMode ? manualCompany : (custObj?.company || "");
 
-  // 당일 이력 로드 (문서번호 순번 계산용)
-  async function loadTodayHistory() {
-    try {
-      const all = await getAllHistory();
-      console.log("[DEBUG] 전체:", all.length, "건 / dateKey:", dateKey);
-      const filtered = all.filter(h =>
-        h.docNo && h.docNo.includes(`GQ${dateKey}`)
-      );
-      console.log("[DEBUG] 오늘 필터링:", filtered.length, "건", filtered.map(h=>({customer:h.customer, docNo:h.docNo})));
-      setTodayHistory(filtered);
-      return filtered;
-    } catch(e) { console.error("[DEBUG] loadTodayHistory 오류:", e); return []; }
-  }
-  useEffect(() => { loadTodayHistory(); }, [date]);
-
   async function loadHistory(name) {
     if (!name) { setCustomerHistory([]); return; }
     setHistLoading(true);
     try {
-      // 전체 이력에서 클라이언트 필터링 (대소문자/공백 무관)
-      const all = await getAllHistory();
-      const filtered = all.filter(h =>
-        h.customer?.replace(/\s/g,"").toLowerCase() === name.replace(/\s/g,"").toLowerCase()
-      );
-      setCustomerHistory(filtered);
+      // 해당 업체 서브컬렉션 직접 조회 (전체 스캔 불필요, 지연 없음)
+      const list = await getHistoryByCustomer(name);
+      setCustomerHistory(list);
     }
     catch(e) { console.error(e); }
     setHistLoading(false);
@@ -143,24 +125,18 @@ export default function QuotationPage({ showToast }) {
   }
   const dateKey = getDateKey();
 
-  // 문서번호: ODA-GQ[YYMMDD][순번]D (업체별 독립 순번)
+  // 문서번호: Quotation for [업체명] GQ[YYMMDD][순번]D (업체별 독립 순번)
+  // customerHistory(해당 업체 서브컬렉션 직접 조회)를 사용 - collectionGroup 인덱싱 지연 회피
   const autoDocNo = useMemo(() => {
-    const custKey = customerName.replace(/[\s/.\[\]*`]/g,"");
-    const prefix  = `GQ${dateKey}`;
-    // todayHistory에서 같은 업체+날짜의 최대 순번 계산
-    const maxSeq = todayHistory.reduce((max, h) => {
+    const maxSeq = customerHistory.reduce((max, h) => {
       if (!h.docNo) return max;
-      const match = h.docNo.match(new RegExp(`GQ${dateKey}(\d{3})D$`));
-      if (match && h.customer?.replace(/[\s/.\[\]*`]/g,"") === custKey) {
-        return Math.max(max, parseInt(match[1], 10));
-      }
-      return max;
+      const match = h.docNo.match(new RegExp(`GQ${dateKey}(\\d{3})D$`));
+      return match ? Math.max(max, parseInt(match[1], 10)) : max;
     }, 0);
-    const seq    = String(maxSeq + 1).padStart(3, "0");
-    // 공백 제거, Firestore ID 불가 문자(/ . [ ] * `) 만 언더바로 치환
+    const seq = String(maxSeq + 1).padStart(3, "0");
     const custDisplay = customerName || "UNKNOWN";
     return `Quotation for ${custDisplay} GQ${dateKey}${seq}D`;
-  }, [dateKey, customerName, todayHistory]);
+  }, [dateKey, customerName, customerHistory]);
 
   const docNo = fixedDocNo || autoDocNo;
 
@@ -233,13 +209,12 @@ export default function QuotationPage({ showToast }) {
   async function handleSave() {
     if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
 
-    // 저장 직전 Firestore에서 실시간 순번 재계산 (업체별 독립, 덮어쓰기 방지)
-    const freshAll = await getAllHistory();
-    const freshMaxSeq = freshAll
-      .filter(h => h.customer === customerName && h.docNo?.includes(`GQ${dateKey}`))
+    // 저장 직전 해당 업체의 서브컬렉션만 직접 재조회 (collectionGroup 인덱싱 지연 회피)
+    const freshCustHistory = await getHistoryByCustomer(customerName);
+    const freshMaxSeq = freshCustHistory
+      .filter(h => h.docNo?.includes(`GQ${dateKey}`))
       .reduce((max, h) => {
-        if (!h.docNo) return max;
-        const match = h.docNo.match(new RegExp("GQ" + dateKey + "(\d{3})D$"));
+        const match = h.docNo.match(new RegExp("GQ" + dateKey + "(\\d{3})D$"));
         return match ? Math.max(max, parseInt(match[1], 10)) : max;
       }, 0);
     const freshDocNo = `Quotation for ${customerName} GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
@@ -248,11 +223,8 @@ export default function QuotationPage({ showToast }) {
     const saved = { ...exportData, docNo: freshDocNo };
     await saveQuote(saved);
 
-    // todayHistory에 직접 추가 (서버 재조회 없이 즉시 순번 반영)
-    setTodayHistory(prev => [...prev, {
-      ...saved,
-      savedAt: new Date().toISOString(),
-    }]);
+    // customerHistory에 직접 추가 (즉시 다음 순번 반영, 재조회 지연 없음)
+    setCustomerHistory(prev => [{ ...saved, savedAt: new Date().toISOString() }, ...prev]);
 
     showToast(`✅ [${freshDocNo}] 견적이 저장되었습니다.`, "success");
     setTimeout(() => handleReset(), 150);
