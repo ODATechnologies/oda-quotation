@@ -94,9 +94,9 @@ export default function QuoteDashboard({ showToast }) {
 
   const fmtUSD = (n) => "$" + Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 
-  async function handleDelete(docNo) {
+  async function handleDelete(customer, docNo) {
     if (!confirm(`[${docNo}] 견적 이력을 삭제하시겠습니까?`)) return;
-    try { await deleteQuote(h.customer, docNo); showToast("삭제되었습니다."); load(); }
+    try { await deleteQuote(customer, docNo); showToast("삭제되었습니다."); load(); }
     catch(e) { showToast("삭제 오류: " + e.message, "error"); }
   }
 
@@ -265,7 +265,7 @@ export default function QuoteDashboard({ showToast }) {
                             <button className="btn btn-secondary btn-sm"
                               onClick={() => isOvs ? exportToPdfOverseas(h) : exportToPdf(h)}>🖨️</button>
                             <button className="btn btn-ghost btn-sm"
-                              onClick={() => handleDelete(h.docNo)}>✕</button>
+                              onClick={() => handleDelete(h.customer, h.docNo)}>✕</button>
                           </div>
                         </td>
                       </tr>

@@ -48,14 +48,16 @@ export async function getHistoryByCustomer(customerName) {
   }
 }
 
-// 전체 조회 (견적 현황용)
+// 전체 조회 (견적 현황용) - 병렬 조회로 성능 개선
 export async function getAllHistory() {
   try {
-    // 모든 업체 문서 조회
     const custSnap = await getDocs(collection(db, "quote_history"));
+    // 모든 업체의 서브컬렉션을 병렬로 조회
+    const results = await Promise.all(
+      custSnap.docs.map(custD => getDocs(quotesCol(custD.id)))
+    );
     const all = [];
-    for (const custD of custSnap.docs) {
-      const quotesSnap = await getDocs(quotesCol(custD.id));
+    results.forEach(quotesSnap => {
       quotesSnap.docs.forEach(d => {
         all.push({
           ...d.data(),
@@ -63,7 +65,7 @@ export async function getAllHistory() {
           savedAt: d.data().savedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         });
       });
-    }
+    });
     return all.sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
   } catch(e) {
     console.error("전체 이력 조회 오류:", e.message);
