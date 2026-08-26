@@ -142,20 +142,20 @@ export default function QuotationPage({ showToast }) {
 
   // 문서번호: ODA-GQ[YYMMDD][순번]D (업체별 독립 순번)
   const autoDocNo = useMemo(() => {
-    const custKey = customerName.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"");
+    const custKey = customerName.replace(/[\s/.\[\]*`]/g,"");
     const prefix  = `GQ${dateKey}`;
     // todayHistory에서 같은 업체+날짜의 최대 순번 계산
     const maxSeq = todayHistory.reduce((max, h) => {
       if (!h.docNo) return max;
-      // 새 형식: Quotation_for_업체명_GQ날짜_순번D
       const match = h.docNo.match(new RegExp(`GQ${dateKey}(\d{3})D$`));
-      if (match && h.customer?.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"") === custKey) {
+      if (match && h.customer?.replace(/[\s/.\[\]*`]/g,"") === custKey) {
         return Math.max(max, parseInt(match[1], 10));
       }
       return max;
     }, 0);
     const seq    = String(maxSeq + 1).padStart(3, "0");
-    const custDisplay = customerName.replace(/\s/g,"") || "UNKNOWN";
+    // 공백 제거, Firestore ID 불가 문자(/ . [ ] * `) 만 언더바로 치환
+    const custDisplay = customerName.replace(/[\s/.\[\]*`]/g,"") || "UNKNOWN";
     return `Quotation_for_${custDisplay}_GQ${dateKey}${seq}D`;
   }, [dateKey, customerName, todayHistory]);
 
@@ -232,17 +232,17 @@ export default function QuotationPage({ showToast }) {
 
     // 저장 직전 Firestore에서 실시간 순번 재계산 (업체별 독립, 덮어쓰기 방지)
     const freshAll = await getAllHistory();
-    const custKey  = customerName.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"");
+    const custKey  = customerName.replace(/[\s/.\[\]*`]/g,"");
     const freshMaxSeq = freshAll.reduce((max, h) => {
       if (!h.docNo) return max;
-      const match = h.docNo.match(new RegExp(`GQ${dateKey}(\d{3})D$`));
-      if (match && h.customer?.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"") === custKey) {
+      const match = h.docNo?.match(new RegExp(`GQ${dateKey}(\d{3})D$`));
+      if (match && h.customer === customerName) {
         return Math.max(max, parseInt(match[1], 10));
       }
       return max;
     }, 0);
-    const custDisplay = customerName.replace(/\s/g,"") || "UNKNOWN";
-    const freshDocNo  = `Quotation_for_${custDisplay}_GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
+    const custDisplay = customerName.replace(/[\s/.\[\]*`]/g,"") || "UNKNOWN";
+    const freshDocNo  = `Quotation for ${customerName} GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
 
     const exportData = buildExportData();
     const saved = { ...exportData, docNo: freshDocNo };

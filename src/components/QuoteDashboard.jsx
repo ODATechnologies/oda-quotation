@@ -96,7 +96,7 @@ export default function QuoteDashboard({ showToast }) {
 
   async function handleDelete(docNo) {
     if (!confirm(`[${docNo}] 견적 이력을 삭제하시겠습니까?`)) return;
-    try { await deleteQuote(docNo); showToast("삭제되었습니다."); load(); }
+    try { await deleteQuote(h.customer, docNo); showToast("삭제되었습니다."); load(); }
     catch(e) { showToast("삭제 오류: " + e.message, "error"); }
   }
 

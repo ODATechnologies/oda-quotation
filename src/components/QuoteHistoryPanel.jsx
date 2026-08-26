@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { fmtNumber } from "../utils/helpers";
 import { deleteQuote } from "../utils/historyStore";
-import { exportToPdf }         from "../utils/exportPdf";
-import { exportToPdfOverseas } from "../utils/exportPdfOverseas";
+import { exportToPdf } from "../utils/exportPdf";
 
 export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, loading }) {
   const [popup, setPopup] = useState(null); // 선택된 record
@@ -28,7 +27,7 @@ export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, lo
   }
 
   function handleView() {
-    popup.mode === "overseas" ? exportToPdfOverseas(popup) : exportToPdf(popup);
+    exportToPdf(popup);
   }
 
   return (
