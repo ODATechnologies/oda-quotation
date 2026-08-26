@@ -131,26 +131,33 @@ export default function QuotationPage({ showToast }) {
   }
   useEffect(() => { loadHistory(customerName); }, [customerName]);
 
-  // 문서번호 prefix 계산
-  const docPrefix = useMemo(() => {
+  // 날짜 키: YYMMDD
+  const dateKey = useMemo(() => {
     const d = date ? new Date(date) : new Date();
     const yy = String(d.getFullYear()).slice(2);
     const mm = String(d.getMonth()+1).padStart(2,"0");
     const dd = String(d.getDate()).padStart(2,"0");
-    return `ODA-GQ${yy}${mm}${dd}`;
+    return `${yy}${mm}${dd}`;
   }, [date]);
 
-  // 표시용 문서번호: todayHistory 기반 (화면 표시용만)
+  // 문서번호: ODA-GQ[YYMMDD][순번]D (업체별 독립 순번)
   const autoDocNo = useMemo(() => {
+    const custKey = customerName.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"");
+    const prefix  = `GQ${dateKey}`;
+    // todayHistory에서 같은 업체+날짜의 최대 순번 계산
     const maxSeq = todayHistory.reduce((max, h) => {
-      if (h.docNo && h.docNo.startsWith(docPrefix)) {
-        const num = parseInt(h.docNo.slice(docPrefix.length, docPrefix.length+3), 10);
-        return isNaN(num) ? max : Math.max(max, num);
+      if (!h.docNo) return max;
+      // 새 형식: Quotation_for_업체명_GQ날짜_순번D
+      const match = h.docNo.match(new RegExp(`GQ${dateKey}_(\d+)D$`));
+      if (match && h.customer?.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"") === custKey) {
+        return Math.max(max, parseInt(match[1], 10));
       }
       return max;
     }, 0);
-    return `${docPrefix}${String(maxSeq+1).padStart(3,"0")}D`;
-  }, [docPrefix, todayHistory]);
+    const seq    = String(maxSeq + 1).padStart(3, "0");
+    const custDisplay = customerName.replace(/\s/g,"") || "UNKNOWN";
+    return `Quotation_for_${custDisplay}_GQ${dateKey}_${seq}D`;
+  }, [dateKey, customerName, todayHistory]);
 
   const docNo = fixedDocNo || autoDocNo;
 
@@ -223,16 +230,19 @@ export default function QuotationPage({ showToast }) {
   async function handleSave() {
     if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
 
-    // 저장 직전 Firestore에서 실시간 순번 재계산 (덮어쓰기 방지)
+    // 저장 직전 Firestore에서 실시간 순번 재계산 (업체별 독립, 덮어쓰기 방지)
     const freshAll = await getAllHistory();
-    const today = (date ? new Date(date) : new Date()).toISOString().slice(0,10);
-    const freshMaxSeq = freshAll
-      .filter(h => h.savedAt && h.savedAt.slice(0,10) === today && h.docNo?.startsWith(docPrefix))
-      .reduce((max, h) => {
-        const num = parseInt(h.docNo.slice(docPrefix.length, docPrefix.length+3), 10);
-        return isNaN(num) ? max : Math.max(max, num);
-      }, 0);
-    const freshDocNo = `${docPrefix}${String(freshMaxSeq+1).padStart(3,"0")}D`;
+    const custKey  = customerName.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"");
+    const freshMaxSeq = freshAll.reduce((max, h) => {
+      if (!h.docNo) return max;
+      const match = h.docNo.match(new RegExp(`GQ${dateKey}_(\d+)D$`));
+      if (match && h.customer?.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"") === custKey) {
+        return Math.max(max, parseInt(match[1], 10));
+      }
+      return max;
+    }, 0);
+    const custDisplay = customerName.replace(/\s/g,"") || "UNKNOWN";
+    const freshDocNo  = `Quotation_for_${custDisplay}_GQ${dateKey}_${String(freshMaxSeq+1).padStart(3,"0")}D`;
 
     const exportData = buildExportData();
     const saved = { ...exportData, docNo: freshDocNo };
