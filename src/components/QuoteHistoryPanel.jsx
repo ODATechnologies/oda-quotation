@@ -13,10 +13,10 @@ export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, lo
   );
   if (!history || history.length === 0) return null;
 
-  async function handleDelete(e, docNo) {
+  async function handleDelete(e, docNo, customer) {
     e.stopPropagation();
     if (!confirm(`[${docNo}] 견적 이력을 삭제하시겠습니까?`)) return;
-    await deleteQuote(docNo);
+    await deleteQuote(customer, docNo);
     onHistoryChange();
   }
 
@@ -83,7 +83,7 @@ export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, lo
             </div>
             <button
               className="btn btn-ghost btn-sm"
-              onClick={e=>{e.stopPropagation();handleDelete(e,record.docNo);}}
+              onClick={e=>{e.stopPropagation();handleDelete(e,record.docNo,record.customer);}}
               title="이력 삭제"
               style={{ fontSize:14, padding:"4px 6px", color:"var(--text-muted)" }}>✕</button>
           </div>

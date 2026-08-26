@@ -209,25 +209,59 @@ export default function QuotationPage({ showToast }) {
   async function handleSave() {
     if (!customerName) { showToast("업체를 선택하거나 입력해주세요.", "error"); return; }
 
-    // 저장 직전 해당 업체의 서브컬렉션만 직접 재조회 (collectionGroup 인덱싱 지연 회피)
-    const freshCustHistory = await getHistoryByCustomer(customerName);
-    const freshMaxSeq = freshCustHistory
-      .filter(h => h.docNo?.includes(`GQ${dateKey}`))
-      .reduce((max, h) => {
-        const match = h.docNo.match(new RegExp("GQ" + dateKey + "(\\d{3})D$"));
-        return match ? Math.max(max, parseInt(match[1], 10)) : max;
-      }, 0);
-    const freshDocNo = `Quotation for ${customerName} GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
+    let finalDocNo;
+
+    if (fixedDocNo) {
+      // 이력에서 불러와 수정한 경우: 같은 문서번호로 업데이트 저장
+      finalDocNo = fixedDocNo;
+    } else {
+      // 신규 견적: 해당 업체 서브컬렉션만 직접 재조회하여 다음 순번 계산
+      const freshCustHistory = await getHistoryByCustomer(customerName);
+      const freshMaxSeq = freshCustHistory
+        .filter(h => h.docNo?.includes(`GQ${dateKey}`))
+        .reduce((max, h) => {
+          const match = h.docNo.match(new RegExp("GQ" + dateKey + "(\\d{3})D$"));
+          return match ? Math.max(max, parseInt(match[1], 10)) : max;
+        }, 0);
+      finalDocNo = `Quotation for ${customerName} GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
+    }
 
     const exportData = buildExportData();
-    const saved = { ...exportData, docNo: freshDocNo };
+    const saved = { ...exportData, docNo: finalDocNo };
     await saveQuote(saved);
 
-    // customerHistory에 직접 추가 (즉시 다음 순번 반영, 재조회 지연 없음)
-    setCustomerHistory(prev => [{ ...saved, savedAt: new Date().toISOString() }, ...prev]);
+    // customerHistory 갱신 (기존 항목 업데이트 또는 새 항목 추가)
+    setCustomerHistory(prev => {
+      const exists = prev.some(h => h.docNo === finalDocNo);
+      const updated = { ...saved, savedAt: new Date().toISOString() };
+      return exists
+        ? prev.map(h => h.docNo === finalDocNo ? updated : h)
+        : [updated, ...prev];
+    });
 
-    showToast(`✅ [${freshDocNo}] 견적이 저장되었습니다.`, "success");
-    setTimeout(() => handleReset(), 150);
+    showToast(`✅ [${finalDocNo}] 견적이 저장되었습니다.`, "success");
+
+    // 저장과 동시에 PDF 인쇄창 자동 표시
+    try {
+      if (mode === "overseas") {
+        exportToPdfOverseas(saved);
+      } else {
+        exportToPdf(saved);
+      }
+    } catch(e) { /* PDF 실패해도 저장은 이미 완료됨 */ }
+
+    // 고객 정보는 유지하고 견적 내용만 초기화 (확인창 없이 자동)
+    setTimeout(() => clearQuoteContent(), 150);
+  }
+
+  // 견적 내용만 초기화 (고객/날짜/모드/환율은 유지)
+  function clearQuoteContent() {
+    setTerms(DEFAULT_TERMS);
+    setItems([]);
+    setNextId(1);
+    setFixedDocNo(null);
+    setMemo("");
+    setMemoColor("#111111");
   }
 
   const handleLoadFromHistory = useCallback((record) => {
@@ -248,14 +282,14 @@ export default function QuotationPage({ showToast }) {
     setTerms(record.terms||DEFAULT_TERMS);
     setMemo(record.memo||"");
     setMemoColor(record.memoColor||"#111111");
-    // 재견적 시 새 문서번호를 자동 발급하도록 fixedDocNo는 설정하지 않음
-    setFixedDocNo(null);
+    // 이력에서 불러온 견적은 원래 문서번호를 유지 (수정 후 재저장 시 같은 문서 업데이트)
+    setFixedDocNo(record.docNo);
     if (record.mode) setMode(record.mode);
     if (record.exchangeRate) setExchangeRate(record.exchangeRate);
     const restoredItems = (record.items||[]).map((item,i)=>({...item, id:i+1}));
     setItems(restoredItems);
     setNextId(restoredItems.length+1);
-    showToast(`[${record.docNo}] 견적 내용을 불러왔습니다. (새 문서번호가 발급됩니다)`, "success");
+    showToast(`[${record.docNo}] 견적을 불러왔습니다.`, "success");
   }, [customerList, staffList, showToast]);
 
   function handleReset() {
