@@ -148,7 +148,7 @@ export default function QuotationPage({ showToast }) {
     const maxSeq = todayHistory.reduce((max, h) => {
       if (!h.docNo) return max;
       // 새 형식: Quotation_for_업체명_GQ날짜_순번D
-      const match = h.docNo.match(new RegExp(`GQ${dateKey}_(\d+)D$`));
+      const match = h.docNo.match(new RegExp(`GQ${dateKey}(\d{3})D$`));
       if (match && h.customer?.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"") === custKey) {
         return Math.max(max, parseInt(match[1], 10));
       }
@@ -156,7 +156,7 @@ export default function QuotationPage({ showToast }) {
     }, 0);
     const seq    = String(maxSeq + 1).padStart(3, "0");
     const custDisplay = customerName.replace(/\s/g,"") || "UNKNOWN";
-    return `Quotation_for_${custDisplay}_GQ${dateKey}_${seq}D`;
+    return `Quotation_for_${custDisplay}_GQ${dateKey}${seq}D`;
   }, [dateKey, customerName, todayHistory]);
 
   const docNo = fixedDocNo || autoDocNo;
@@ -235,14 +235,14 @@ export default function QuotationPage({ showToast }) {
     const custKey  = customerName.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"");
     const freshMaxSeq = freshAll.reduce((max, h) => {
       if (!h.docNo) return max;
-      const match = h.docNo.match(new RegExp(`GQ${dateKey}_(\d+)D$`));
+      const match = h.docNo.match(new RegExp(`GQ${dateKey}(\d{3})D$`));
       if (match && h.customer?.replace(/\s/g,"").replace(/[^a-zA-Z0-9가-힣]/g,"") === custKey) {
         return Math.max(max, parseInt(match[1], 10));
       }
       return max;
     }, 0);
     const custDisplay = customerName.replace(/\s/g,"") || "UNKNOWN";
-    const freshDocNo  = `Quotation_for_${custDisplay}_GQ${dateKey}_${String(freshMaxSeq+1).padStart(3,"0")}D`;
+    const freshDocNo  = `Quotation_for_${custDisplay}_GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
 
     const exportData = buildExportData();
     const saved = { ...exportData, docNo: freshDocNo };
