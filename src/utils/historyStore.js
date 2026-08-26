@@ -48,9 +48,10 @@ export async function getHistoryByCustomer(customerName) {
 // 전체 조회 (견적 현황용) - collectionGroup으로 모든 quotes 서브컬렉션 한 번에 조회
 export async function getAllHistory() {
   try {
-    // collectionGroup: 이름이 "quotes"인 모든 서브컬렉션을 한 번에 쿼리
+    console.log("[DEBUG] collectionGroup 쿼리 시작...");
     const q = query(collectionGroup(db, "quotes"));
     const snap = await getDocsFromServer(q);
+    console.log("[DEBUG] collectionGroup 결과:", snap.docs.length, "건");
     const all = snap.docs.map(d => ({
       ...d.data(),
       docNo:   d.id,
@@ -58,15 +59,18 @@ export async function getAllHistory() {
     }));
     return all.sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
   } catch(e) {
-    console.error("전체 이력 조회 오류(collectionGroup):", e.message);
+    console.error("[DEBUG] collectionGroup 실패:", e.code, e.message);
     // fallback: 기존 방식
     try {
+      console.log("[DEBUG] fallback 방식 시도...");
       const custSnap = await getDocsFromServer(collection(db, "quote_history"));
+      console.log("[DEBUG] 업체 문서 수:", custSnap.docs.length, custSnap.docs.map(d=>d.id));
       const results = await Promise.all(
         custSnap.docs.map(custD => getDocsFromServer(quotesCol(custD.id)))
       );
       const all = [];
-      results.forEach(quotesSnap => {
+      results.forEach((quotesSnap, i) => {
+        console.log(`[DEBUG] ${custSnap.docs[i].id} 견적 수:`, quotesSnap.docs.length);
         quotesSnap.docs.forEach(d => {
           all.push({
             ...d.data(),
@@ -77,7 +81,7 @@ export async function getAllHistory() {
       });
       return all.sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
     } catch(e2) {
-      console.error("fallback도 실패:", e2.message);
+      console.error("[DEBUG] fallback도 실패:", e2.code, e2.message);
       return [];
     }
   }

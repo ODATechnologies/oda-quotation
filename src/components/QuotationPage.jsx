@@ -106,12 +106,14 @@ export default function QuotationPage({ showToast }) {
   async function loadTodayHistory() {
     try {
       const all = await getAllHistory();
+      console.log("[DEBUG] 전체:", all.length, "건 / dateKey:", dateKey);
       const filtered = all.filter(h =>
         h.docNo && h.docNo.includes(`GQ${dateKey}`)
       );
+      console.log("[DEBUG] 오늘 필터링:", filtered.length, "건", filtered.map(h=>({customer:h.customer, docNo:h.docNo})));
       setTodayHistory(filtered);
       return filtered;
-    } catch(e) { return []; }
+    } catch(e) { console.error("[DEBUG] loadTodayHistory 오류:", e); return []; }
   }
   useEffect(() => { loadTodayHistory(); }, [date]);
 
