@@ -232,24 +232,25 @@ export default function QuotationPage({ showToast }) {
 
     // 저장 직전 Firestore에서 실시간 순번 재계산 (업체별 독립, 덮어쓰기 방지)
     const freshAll = await getAllHistory();
-    const custKey  = customerName.replace(/[\s/.\[\]*`]/g,"");
-    const freshMaxSeq = freshAll.reduce((max, h) => {
-      if (!h.docNo) return max;
-      const match = h.docNo?.match(new RegExp(`GQ${dateKey}(\d{3})D$`));
-      if (match && h.customer === customerName) {
-        return Math.max(max, parseInt(match[1], 10));
-      }
-      return max;
-    }, 0);
-    const freshDocNo  = `Quotation for ${customerName} GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
+    const today = (date ? new Date(date) : new Date()).toISOString().slice(0,10);
+    const freshMaxSeq = freshAll
+      .filter(h => h.customer === customerName && h.savedAt?.slice(0,10) === today)
+      .reduce((max, h) => {
+        if (!h.docNo) return max;
+        const match = h.docNo.match(new RegExp("GQ" + dateKey + "(\d{3})D$"));
+        return match ? Math.max(max, parseInt(match[1], 10)) : max;
+      }, 0);
+    const freshDocNo = `Quotation for ${customerName} GQ${dateKey}${String(freshMaxSeq+1).padStart(3,"0")}D`;
 
     const exportData = buildExportData();
     const saved = { ...exportData, docNo: freshDocNo };
     await saveQuote(saved);
 
-    // 이력 갱신
-    const updated = await loadTodayHistory();
-    setTodayHistory(updated || []);
+    // todayHistory에 직접 추가 (서버 재조회 없이 즉시 순번 반영)
+    setTodayHistory(prev => [...prev, {
+      ...saved,
+      savedAt: new Date().toISOString(),
+    }]);
 
     showToast(`✅ [${freshDocNo}] 견적이 저장되었습니다.`, "success");
     setTimeout(() => handleReset(), 150);
