@@ -114,7 +114,7 @@ export default function QuotationPage({ showToast }) {
       return filtered;
     } catch(e) { return []; }
   }
-  useEffect(() => { loadTodayHistory(); }, [dateKey]);
+  useEffect(() => { loadTodayHistory(); }, [date]);
 
   async function loadHistory(name) {
     if (!name) { setCustomerHistory([]); return; }
@@ -132,14 +132,15 @@ export default function QuotationPage({ showToast }) {
   }
   useEffect(() => { loadHistory(customerName); }, [customerName]);
 
-  // 날짜 키: YYMMDD
-  const dateKey = useMemo(() => {
-    const d = date ? new Date(date) : new Date();
-    const yy = String(d.getFullYear()).slice(2);
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
+  // 날짜 키: YYMMDD (일반 함수로 계산)
+  function getDateKey(d) {
+    const dt = d || (date ? new Date(date) : new Date());
+    const yy = String(dt.getFullYear()).slice(2);
+    const mm = String(dt.getMonth()+1).padStart(2,"0");
+    const dd = String(dt.getDate()).padStart(2,"0");
     return `${yy}${mm}${dd}`;
-  }, [date]);
+  }
+  const dateKey = getDateKey();
 
   // 문서번호: ODA-GQ[YYMMDD][순번]D (업체별 독립 순번)
   const autoDocNo = useMemo(() => {
