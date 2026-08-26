@@ -34,5 +34,10 @@ service cloud.firestore {
         allow read, write: if request.auth != null;
       }
     }
+
+    // collectionGroup 쿼리("quotes")를 위한 규칙 - 모든 depth의 quotes 서브컬렉션 허용
+    match /{path=**}/quotes/{docId} {
+      allow read: if request.auth != null;
+    }
   }
 }

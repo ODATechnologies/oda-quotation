@@ -1,6 +1,6 @@
 import {
-  collection, doc, setDoc, getDocs, getDocsFromServer,
-  deleteDoc, serverTimestamp, getDoc,
+  collection, collectionGroup, doc, setDoc, getDocs, getDocsFromServer,
+  deleteDoc, serverTimestamp, query,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -20,10 +20,7 @@ export async function saveQuote(quoteData) {
   const customer = quoteData.customer || "UNKNOWN";
   const docId    = quoteData.docNo || `Quotation for ${customer} ${Date.now()}`;
 
-  // 업체 문서 생성 (없으면)
   await setDoc(custDoc(customer), { customer, updatedAt: serverTimestamp() }, { merge: true });
-
-  // 견적 저장
   await setDoc(quoteDoc(customer, docId), {
     ...quoteData,
     savedAt: serverTimestamp(),
@@ -34,7 +31,7 @@ export async function saveQuote(quoteData) {
 export async function getHistoryByCustomer(customerName) {
   if (!customerName) return [];
   try {
-    const snap = await getDocs(quotesCol(customerName));
+    const snap = await getDocsFromServer(quotesCol(customerName));
     return snap.docs
       .map(d => ({
         ...d.data(),
@@ -48,28 +45,41 @@ export async function getHistoryByCustomer(customerName) {
   }
 }
 
-// 전체 조회 (견적 현황용) - 병렬 조회 + 캐시 우회로 최신 데이터 보장
+// 전체 조회 (견적 현황용) - collectionGroup으로 모든 quotes 서브컬렉션 한 번에 조회
 export async function getAllHistory() {
   try {
-    const custSnap = await getDocsFromServer(collection(db, "quote_history"));
-    // 모든 업체의 서브컬렉션을 병렬로 조회 (서버 강제 조회)
-    const results = await Promise.all(
-      custSnap.docs.map(custD => getDocsFromServer(quotesCol(custD.id)))
-    );
-    const all = [];
-    results.forEach(quotesSnap => {
-      quotesSnap.docs.forEach(d => {
-        all.push({
-          ...d.data(),
-          docNo:   d.id,
-          savedAt: d.data().savedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-        });
-      });
-    });
+    // collectionGroup: 이름이 "quotes"인 모든 서브컬렉션을 한 번에 쿼리
+    const q = query(collectionGroup(db, "quotes"));
+    const snap = await getDocsFromServer(q);
+    const all = snap.docs.map(d => ({
+      ...d.data(),
+      docNo:   d.id,
+      savedAt: d.data().savedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+    }));
     return all.sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
   } catch(e) {
-    console.error("전체 이력 조회 오류:", e.message);
-    return [];
+    console.error("전체 이력 조회 오류(collectionGroup):", e.message);
+    // fallback: 기존 방식
+    try {
+      const custSnap = await getDocsFromServer(collection(db, "quote_history"));
+      const results = await Promise.all(
+        custSnap.docs.map(custD => getDocsFromServer(quotesCol(custD.id)))
+      );
+      const all = [];
+      results.forEach(quotesSnap => {
+        quotesSnap.docs.forEach(d => {
+          all.push({
+            ...d.data(),
+            docNo:   d.id,
+            savedAt: d.data().savedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+          });
+        });
+      });
+      return all.sort((a,b) => new Date(b.savedAt) - new Date(a.savedAt));
+    } catch(e2) {
+      console.error("fallback도 실패:", e2.message);
+      return [];
+    }
   }
 }
 

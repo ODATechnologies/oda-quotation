@@ -106,15 +106,12 @@ export default function QuotationPage({ showToast }) {
   async function loadTodayHistory() {
     try {
       const all = await getAllHistory();
-      console.log("[DEBUG] getAllHistory 결과:", all.length, "건", all);
-      // savedAt 대신 docNo의 날짜로 필터링 (serverTimestamp 지연 문제 방지)
       const filtered = all.filter(h =>
         h.docNo && h.docNo.includes(`GQ${dateKey}`)
       );
-      console.log("[DEBUG] 오늘(", dateKey, ") 필터링 결과:", filtered.length, "건", filtered);
       setTodayHistory(filtered);
       return filtered;
-    } catch(e) { console.error("[DEBUG] loadTodayHistory 오류:", e); return []; }
+    } catch(e) { return []; }
   }
   useEffect(() => { loadTodayHistory(); }, [date]);
 
