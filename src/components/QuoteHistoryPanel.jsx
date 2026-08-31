@@ -33,9 +33,15 @@ export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, lo
     onHistoryChange();
   }
 
-  function handleLoad() {
-    if (!confirm(`[${popup.docNo}] 견적을 불러오시겠습니까?\n현재 작성 중인 내용은 사라집니다.`)) return;
-    onLoad(popup);
+  function handleLoadEdit() {
+    if (!confirm(`[${popup.docNo}] 견적을 불러오시겠습니까?\n현재 작성 중인 내용은 사라집니다.\n(같은 문서번호로 수정/재저장됩니다)`)) return;
+    onLoad(popup, "edit");
+    setPopup(null);
+  }
+
+  function handleCopy() {
+    if (!confirm(`[${popup.docNo}] 견적을 복사하시겠습니까?\n현재 작성 중인 내용은 사라집니다.\n(새 문서번호로 저장되며, 수신 업체를 변경할 수 있습니다)`)) return;
+    onLoad(popup, "copy");
     setPopup(null);
   }
 
@@ -210,7 +216,7 @@ export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, lo
                 🖨️ 견적서 보기 (PDF 인쇄)
               </button>
               <button
-                onClick={handleLoad}
+                onClick={handleLoadEdit}
                 style={{
                   width:"100%", padding:"11px 0",
                   background:"#1E3C78", color:"#fff",
@@ -221,6 +227,19 @@ export default function QuoteHistoryPanel({ history, onLoad, onHistoryChange, lo
                 }}
               >
                 📝 다시 불러오기 (수정)
+              </button>
+              <button
+                onClick={handleCopy}
+                style={{
+                  width:"100%", padding:"11px 0",
+                  background:"#fff", color:"#1E3C78",
+                  border:"1.5px solid #1E3C78", borderRadius:8,
+                  fontSize:14, fontWeight:600, cursor:"pointer",
+                  fontFamily:"inherit",
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                }}
+              >
+                📄 견적서 복사하기 (새 견적)
               </button>
               <button
                 onClick={() => setPopup(null)}

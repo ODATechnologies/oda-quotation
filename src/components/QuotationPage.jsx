@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { DEFAULT_TERMS, SUPPLIER_INFO, SUPPLIER_INFO_OVERSEAS } from "../data/masterData";
@@ -68,6 +68,8 @@ export default function QuotationPage({ showToast }) {
   const [customerHistory, setCustomerHistory] = useState([]);
   const [histLoading,   setHistLoading]   = useState(false);
   const [fixedDocNo,    setFixedDocNo]    = useState(null);
+  // 복사 직후 1회에 한해 "업체 변경 시 내용 초기화" 확인을 건너뛰기 위한 플래그
+  const justCopiedRef = useRef(false);
   const [itemModal,     setItemModal]     = useState(null);
   const [overseasForm,  setOverseasForm]  = useState({
     shipperCompany: "ODA Technologies Co., Ltd.",
@@ -264,7 +266,7 @@ export default function QuotationPage({ showToast }) {
     setMemoColor("#111111");
   }
 
-  const handleLoadFromHistory = useCallback((record) => {
+  const handleLoadFromHistory = useCallback((record, action = "edit") => {
     const foundCust = customerList.find(c => c.company===record.customer);
     if (foundCust) {
       setManualMode(false); setCustId(foundCust._id || foundCust.id);
@@ -282,14 +284,30 @@ export default function QuotationPage({ showToast }) {
     setTerms(record.terms||DEFAULT_TERMS);
     setMemo(record.memo||"");
     setMemoColor(record.memoColor||"#111111");
-    // 이력에서 불러온 견적은 원래 문서번호를 유지 (수정 후 재저장 시 같은 문서 업데이트)
-    setFixedDocNo(record.docNo);
+
+    if (action === "copy") {
+      // 복사: 새 문서번호를 자동 발급하도록 fixedDocNo는 설정하지 않음
+      // 업체를 바꿔도 아래 "업체 변경 시 내용 초기화" 로직이 발동하지 않도록
+      // 방금 로드한 내용을 "확정된 기준값"으로 표시하는 플래그를 세팅
+      setFixedDocNo(null);
+      justCopiedRef.current = true;
+    } else {
+      // 수정: 이력에서 불러온 원래 문서번호를 유지 (재저장 시 같은 문서 업데이트)
+      setFixedDocNo(record.docNo);
+    }
+
     if (record.mode) setMode(record.mode);
     if (record.exchangeRate) setExchangeRate(record.exchangeRate);
     const restoredItems = (record.items||[]).map((item,i)=>({...item, id:i+1}));
     setItems(restoredItems);
     setNextId(restoredItems.length+1);
-    showToast(`[${record.docNo}] 견적을 불러왔습니다.`, "success");
+
+    showToast(
+      action === "copy"
+        ? `[${record.docNo}] 견적을 복사했습니다. (새 문서번호가 발급됩니다)`
+        : `[${record.docNo}] 견적을 불러왔습니다.`,
+      "success"
+    );
   }, [customerList, staffList, showToast]);
 
   function handleReset() {
@@ -379,10 +397,11 @@ export default function QuotationPage({ showToast }) {
             <label style={{ fontSize:12, display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
               <input type="checkbox" checked={manualMode}
                 onChange={e => {
-                  if (items.length > 0) {
+                  if (items.length > 0 && !justCopiedRef.current) {
                     if (!confirm("입력 방식을 변경하면 작성 중인 견적 내용이 초기화됩니다.\n계속하시겠습니까?")) return;
                     setItems([]); setNextId(1); setTerms(DEFAULT_TERMS); setMemo(""); setMemoColor("#111111");
                   }
+                  justCopiedRef.current = false;
                   setManualMode(e.target.checked); setCustId(""); setFixedDocNo(null);
                 }}/>
               수기 입력
@@ -411,10 +430,11 @@ export default function QuotationPage({ showToast }) {
                       ).map(c=>(
                         <div key={c._id||c.id}
                           onMouseDown={()=>{
-                            if (items.length > 0 && (c._id||c.id) !== custId) {
+                            if (items.length > 0 && (c._id||c.id) !== custId && !justCopiedRef.current) {
                               if (!confirm("다른 업체를 선택하면 작성 중인 견적 내용이 초기화됩니다.\n계속하시겠습니까?")) return;
                               setItems([]); setNextId(1); setTerms(DEFAULT_TERMS); setMemo(""); setMemoColor("#111111");
                             }
+                            justCopiedRef.current = false;
                             setCustId(c._id||c.id); setContactIdx(0); setCustSearch(""); setCustDropOpen(false); setFixedDocNo(null);
                           }}
                           style={{padding:"8px 12px",cursor:"pointer",fontSize:13,borderBottom:"0.5px solid var(--border)"}}
@@ -453,13 +473,14 @@ export default function QuotationPage({ showToast }) {
                     onChange={e=>{ setManualCompany(e.target.value); setFixedDocNo(null); }}
                     onBlur={e => {
                       const prev = e.target.dataset.prevValue ?? "";
-                      if (items.length > 0 && manualCompany !== prev && prev !== "") {
+                      if (items.length > 0 && manualCompany !== prev && prev !== "" && !justCopiedRef.current) {
                         if (!confirm("업체명이 변경되었습니다. 작성 중인 견적 내용을 초기화하시겠습니까?")) {
                           setManualCompany(prev);
                           return;
                         }
                         setItems([]); setNextId(1); setTerms(DEFAULT_TERMS); setMemo(""); setMemoColor("#111111");
                       }
+                      justCopiedRef.current = false;
                     }}
                     placeholder="업체명 입력"/>
                 </div>
