@@ -90,7 +90,11 @@ export default function QuoteDashboard({ showToast }) {
     });
     return map;
   }, [filtered, period]);
-  const periodKeys = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+  // 그룹 정렬: 문자열 비교("2026년 10월" < "2026년 9월")가 아닌 실제 날짜 기준 최신순
+  const periodKeys = useMemo(() => {
+    const latest = (key) => Math.max(...grouped[key].map(h => h.savedAt ? new Date(h.savedAt).getTime() : 0));
+    return Object.keys(grouped).sort((a,b) => latest(b) - latest(a));
+  }, [grouped]);
 
   const fmtUSD = (n) => "$" + Number(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 

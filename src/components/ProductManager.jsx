@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import { fmtNumber } from "../utils/helpers";
+import ModalBackdrop from "./ModalBackdrop";
 import { useSharedProducts } from "../hooks/useSharedData";
 
 export default function ProductManager({ showToast }) {
@@ -383,9 +384,9 @@ export default function ProductManager({ showToast }) {
 
 function ModalWrap({ title, children, onClose }) {
   return (
-    <div className="modal-backdrop" onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
+    <ModalBackdrop className="modal-backdrop" onClose={onClose}>
       <div className="modal"><div className="modal-title">{title}</div>{children}</div>
-    </div>
+    </ModalBackdrop>
   );
 }
 function CategoryEditForm({ initial, onSave, onClose }) {

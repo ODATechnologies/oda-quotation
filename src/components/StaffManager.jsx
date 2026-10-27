@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
+import ModalBackdrop from "./ModalBackdrop";
 
 export default function StaffManager({ showToast }) {
   const [list,   setList]   = useState([]);
@@ -117,12 +118,12 @@ export default function StaffManager({ showToast }) {
       </div>
 
       {modal && (
-        <div className="modal-backdrop" onClick={e => { if(e.target===e.currentTarget) setModal(null); }}>
+        <ModalBackdrop className="modal-backdrop" onClose={() => setModal(null)}>
           <div className="modal">
             <div className="modal-title">{modal.mode==="add" ? "담당자 추가" : "담당자 수정"}</div>
             <StaffForm initial={modal.data} onSave={save} onClose={() => setModal(null)} />
           </div>
-        </div>
+        </ModalBackdrop>
       )}
     </div>
   );

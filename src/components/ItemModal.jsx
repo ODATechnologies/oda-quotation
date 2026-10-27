@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { fmtNumber, calcItem } from "../utils/helpers";
+import ModalBackdrop from "./ModalBackdrop";
 
 export default function ItemModal({ item, productList, onSave, onClose, isOverseas, exchangeRate }) {
   const [form, setForm] = useState({ ...item });
@@ -116,8 +117,8 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
   );
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}
-      onClick={e => { if(e.target===e.currentTarget) onClose(); }}>
+    <ModalBackdrop onClose={onClose}
+      style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000 }}>
       <div style={{ background:"#fff", borderRadius:12, boxShadow:"0 8px 40px rgba(0,0,0,.18)", width:"min(780px, 95vw)", maxHeight:"90vh", overflowY:"auto", display:"flex", flexDirection:"column" }}>
 
         {/* 헤더 */}
@@ -406,6 +407,6 @@ export default function ItemModal({ item, productList, onSave, onClose, isOverse
           <button className="btn btn-primary" onClick={handleSave} style={{ minWidth:100 }}>확인</button>
         </div>
       </div>
-    </div>
+    </ModalBackdrop>
   );
 }

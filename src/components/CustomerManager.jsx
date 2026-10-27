@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
+import ModalBackdrop from "./ModalBackdrop";
 
 // 업체명 정규화 (법인 형태 표기, 공백, 특수문자 제거 후 비교)
 function normalizeCompany(name) {
@@ -223,9 +224,9 @@ export default function CustomerManager({ showToast }) {
 
 function ModalWrap({ title, children, onClose }) {
   return (
-    <div className="modal-backdrop" onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+    <ModalBackdrop className="modal-backdrop" onClose={onClose}>
       <div className="modal"><div className="modal-title">{title}</div>{children}</div>
-    </div>
+    </ModalBackdrop>
   );
 }
 
